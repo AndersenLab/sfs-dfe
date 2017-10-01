@@ -1,0 +1,64 @@
+---
+title: "New Strains"
+author: "Dan Cook"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: united
+    toc: yes
+  pdf_document: 
+    toc: yes
+---
+
+```{r}
+# Set wd to current dir
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(system("git rev-parse --show-toplevel", intern=T))
+
+read_sfs <- function(infile) {
+    x <- readLines(infile)
+    count = cbind(as.numeric(str_split(x[2], " ")[[1]]))
+    mask = cbind(as.numeric(str_split(x[3], " ")[[1]]))
+    dplyr::bind_cols(list(count = count, mask = mask)) %>%
+      dplyr::mutate(rn = row_number(),
+                    total = n(),
+                    AF = rn / total,
+                    fraction = count/sum(count),
+                    folded = !grepl("unfolded", infile),
+                    site_type = gsub("_(un)?folded\\.sfs", "", basename(infile))) %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(AF = ifelse(
+                                grepl("unfolded", infile), 
+                                AF,
+                                (AF)/2
+                          )
+                    )
+}
+
+
+df = read_sfs("results/all_sites_unfolded.sfs")
+
+ggplot(df) +
+  geom_bar(aes(x=AF, y=fraction), stat='identity') +
+  labs(x = "Frequency", y = "Percent")
+
+df = read_sfs("results/all_sites_unfolded.sfs")
+
+ggplot(df) +
+  geom_bar(aes(x=AF, y=fraction), stat='identity') +
+  labs(x = "Frequency", y = "Count")
+
+
+df = read_sfs("results/stop_gained_folded.sfs")
+
+ggplot(df) +
+  geom_bar(aes(x=AF, y=count), stat='identity') +
+  labs(x = "Frequency", y = "Count")
+
+df = read_sfs("results/stop_gained_unfolded.sfs")
+
+ggplot(df) +
+  geom_bar(aes(x=AF, y=count), stat='identity') +
+  labs(x = "Frequency", y = "Count")
+
+```
