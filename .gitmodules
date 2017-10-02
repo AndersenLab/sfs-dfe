@@ -1,0 +1,3 @@
+[submodule "software/fitdadi"]
+	path = software/fitdadi
+	url = https://github.com/LohmuellerLab/fitdadi
