@@ -10,10 +10,25 @@ output:
     toc: yes
 ---
 
-```{r}
+```{r echo=F, warning=F, message=F}
 # Set wd to current dir
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
 setwd(system("git rev-parse --show-toplevel", intern=T))
+
+opts_knit$set(progress=TRUE)
+
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, print=FALSE, verbose=TRUE)
+opts_chunk$set(results="asis")
+opts_chunk$set(cache=TRUE,cache.path="../cache/")
+opts_chunk$set(fig.path="../figures/", fig.width=12, fig.height=8, dev=c("png", "svg"))
+opts_chunk$set(debug = function(before, options, envir) {
+  if (!before) {
+    message(
+      paste(names(envir), as.list(envir),
+            sep = " = ", collapse = "\n"))
+  }
+})
+
 
 read_sfs <- function(infile) {
     x <- readLines(infile)
@@ -36,29 +51,161 @@ read_sfs <- function(infile) {
 }
 
 
-df = read_sfs("results/all_sites_unfolded.sfs")
-
-ggplot(df) +
-  geom_bar(aes(x=AF, y=fraction), stat='identity') +
-  labs(x = "Frequency", y = "Percent")
-
-df = read_sfs("results/all_sites_unfolded.sfs")
-
-ggplot(df) +
-  geom_bar(aes(x=AF, y=fraction), stat='identity') +
-  labs(x = "Frequency", y = "Count")
+data <- dplyr::bind_rows(
+           lapply(
+                list.files("results/",
+                           pattern = "*sfs",
+                           full.names = T),
+                read_sfs)
+           )
 
 
-df = read_sfs("results/stop_gained_folded.sfs")
+plot_spectra <- function(d, bin_size = 20) {
+    
+  d = d %>%
+      dplyr::mutate(AF=floor(AF * bin_size)/bin_size) 
+  
+  folded <- d %>% dplyr::filter(folded) 
+unfolded <- d %>% dplyr::filter(!folded)
+  
 
-ggplot(df) +
-  geom_bar(aes(x=AF, y=count), stat='identity') +
-  labs(x = "Frequency", y = "Count")
 
-df = read_sfs("results/stop_gained_unfolded.sfs")
+  fold_plot <- ggplot(folded) +
+                  geom_bar(aes(x=AF,
+                               y=fraction,
+                               fill=site_type,
+                               color=site_type),
+                           position='dodge',
+                           size=0.0400,
+                           stat='identity') +
+                  scale_x_continuous(breaks = c(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)) + 
+                  labs(x = "Frequency", y = "Proportion of SNPs", title='Folded') +
+                  theme_gray() +
+                  theme(legend.direction = "horizontal", legend.position = "bottom")
 
-ggplot(df) +
-  geom_bar(aes(x=AF, y=count), stat='identity') +
-  labs(x = "Frequency", y = "Count")
+  legend <- cowplot::get_legend(fold_plot)
+  
+  fold_plot <- fold_plot + theme(legend.position="none")
+  
+  unfolded_plot <- ggplot(unfolded) +
+                     geom_bar(aes(x=AF,
+                               y=fraction,
+                               fill=site_type,
+                               color=site_type),
+                           position='dodge',
+                           size=0.0400,
+                           stat='identity') +
+                     labs(x = "Frequency", y = "Proportion of SNPs", title='Unfolded') +
+                     theme_gray() +
+                      theme(legend.position="none")
+
+
+
+  out = cowplot::plot_grid(fold_plot,
+                     unfolded_plot,
+                     legend,
+                     ncol=1,
+                     nrow=3,
+                     rel_heights = c(5,5,1))
+  out
+}
+
+
+```
+
+# All Sites
+
+```{r all_sites}
+
+data %>% 
+  dplyr::filter(site_type == 'all_sites') %>%
+  plot_spectra(., 30)
+
+```
+
+# Nonsynonymous vs. synonymous
+
+```{r ns_vs_s}
+
+data %>% 
+  dplyr::mutate(site_type = case_when(site_type == 'effect_missense_variant' ~ 'Nonsynonymous',
+                                      site_type == 'effect_synonymous_variant' ~ 'Synonymous')) %>%
+  dplyr::filter(site_type %in% c('Nonsynonymous', 'Synonymous')) %>%
+  plot_spectra(., 30)
+
+```
+
+# Gene Effect
+
+```{r gene_effect}
+
+gene_parts = c("effect_intron_variant",
+  "effect_intergenic_variant",
+  "effect_stop_gained",
+  "effect_missense_variant",
+  "effect_3_prime_UTR_variant",
+  "effect_5_prime_UTR_variant")
+
+data %>% 
+  dplyr::filter(site_type %in% gene_parts) %>%
+  plot_spectra(., 30)
+
+```
+
+# Codons
+
+## Degeneracy
+
+```{r codon_degeneracy}
+
+data %>% 
+  dplyr::filter(grepl("fold_", site_type)) %>%
+  plot_spectra(., 30)
+
+```
+
+# Impact
+
+
+```{r impact}
+
+data %>% 
+  dplyr::filter(grepl("impact_", site_type)) %>%
+  plot_spectra(., 30)
+
+```
+
+# Biotype
+
+```{r biotype}
+
+data %>%
+  dplyr::filter(grepl("biotype_", site_type)) %>%
+  dplyr::filter(site_type %in% c("biotype_protein_coding", "biotype_pseudogene", "biotype_rRNA", "biotype_miRNA", "biotype_snRNA", "biotype_snoRNA")) %>%
+  plot_spectra(., 30)
+
+```
+
+# Chromosome
+
+## By Chromosome
+
+```{r chrom}
+
+chrom_set = paste("chrom_", c("I", "II", "III", "IV", "V", "X", "MtDNA"), sep='')
+
+data %>% 
+  dplyr::filter(site_type %in% chrom_set) %>%
+  plot_spectra(., 20)
+
+```
+
+## By Arms vs. Centers
+
+```{r arm_v_center}
+
+data %>% 
+  dplyr::filter(site_type %in% c("chrom_arm", "chrom_center")) %>%
+  plot_spectra(., 20)
 
 ```

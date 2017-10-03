@@ -7,6 +7,7 @@ import csv
 from collections import Counter
 from collections import defaultdict
 from itertools import chain
+from granthem import granthem, three_letter_to_one
 
 from os.path import dirname
 from subprocess import Popen, PIPE
@@ -66,6 +67,7 @@ def arm_or_center(chrom, pos):
         c = 'arm'
     return c
 
+f = []
 
 site_types = ['3_prime_UTR_variant',
               '5_prime_UTR_premature_start_codon_gain_variant',
@@ -112,9 +114,8 @@ for line in sys.stdin:
         gts = line.strip().split("\t")[9:]
         gt_count = Counter(gts)
         mac = min(gt_count.values())
-        oac = gts.count(gts[outgroup_index]) - 1
-        
-
+        # Use derived allele
+        oac = len(gts) - gts.count(gts[outgroup_index]) - 1
 
         # Whole sfs
         sfs_out['all_sites'].folded.update([mac])
@@ -124,7 +125,7 @@ for line in sys.stdin:
         ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in INFO.split(",")]
 
 
-        for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
+        for effect in {sum([x['effect'].split("&") for x in ANN_SET], [])}:
             if effect:
                 sfs_out['effect_' + effect].folded.update([mac])
                 sfs_out['effect_' + effect].unfolded.update([oac])
@@ -152,6 +153,30 @@ for line in sys.stdin:
             sfs_out['chrom_' + aoc].folded.update([mac])
             sfs_out['chrom_' + aoc].unfolded.update([oac])
 
+        def extract_aa(aa_change):
+            aa1, aa2 = re.split('[0-9]+', aa_change[2:])
+            try:
+                return (three_letter_to_one[aa1], three_letter_to_one[aa2],)
+            except:
+                pass
+
+        # Gene flags
+        if 'operon' in sp_line[7]:
+            sfs_out['gene_operon'].folded.update([mac])
+            sfs_out['gene_operon'].unfolded.update([oac])
+
+        # Granthem score (non-synonymous only)
+        for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
+            if x in granthem.keys() and x[0] != x[1]:
+                g = granthem[x]
+                g_out = int(math.floor(g/40.0)*40)
+                sfs_out['granthem_' + g_out].folded.update([mac])
+                sfs_out['granthem_' + g_out].unfolded.update([oac])
+
+        #print({re.split('[0-9]+', x['aa_change']) for x in ANN_SET if x['aa_change']})
+        #if m:
+        #    print(m.group(1))
+        #    print(m.group(2))
 
         # match HGVS change and calculate degeneracy
         m = re.match(".*\|([A-Za-z]{3})/([A-Za-z]{3})\|.*", line)
@@ -169,9 +194,12 @@ for line in sys.stdin:
             if degeneracy == 1:
                 degeneracy = 0
 
-            site_type = f"{degeneracy}-fold"
+            site_type = f"{degeneracy}"
             sfs_out['fold_' + site_type].folded.update([mac])
             sfs_out['fold_' + site_type].unfolded.update([oac])
+
+
+
 
 for k, v in sfs_out.items():
     for sfs_type in ['folded', 'unfolded']:
