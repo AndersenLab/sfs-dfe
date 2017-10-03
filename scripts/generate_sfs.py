@@ -6,6 +6,7 @@ import re
 import csv
 from collections import Counter
 from collections import defaultdict
+from itertools import chain
 
 from os.path import dirname
 from subprocess import Popen, PIPE
@@ -54,6 +55,8 @@ for k, v in chrom_arm_center.items():
 
 
 def arm_or_center(chrom, pos):
+    if chrom == 'MtDNA':
+        return None
     ca = chrom_arm_center[chrom]
     if pos > ca[0]:
         c = 'arm'
@@ -120,20 +123,23 @@ for line in sys.stdin:
         INFO = [x.split("=")[1] for x in line.split("\t")[7].split(";") if x.split("=")[0] == "ANN"][0]
         ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in INFO.split(",")]
 
-        # effect
-        for effect in {x['effect'] for x in ANN_SET}:
-            sfs_out['effect_' + effect].folded.update([mac])
-            sfs_out['effect_' + effect].unfolded.update([oac])
+
+        for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
+            if effect:
+                sfs_out['effect_' + effect].folded.update([mac])
+                sfs_out['effect_' + effect].unfolded.update([oac])
 
         # impact
         for impact in {x['impact'] for x in ANN_SET}:
-            sfs_out['impact_' + impact].folded.update([mac])
-            sfs_out['impact_' + impact].unfolded.update([oac])
+            if impact:
+                sfs_out['impact_' + impact].folded.update([mac])
+                sfs_out['impact_' + impact].unfolded.update([oac])
 
         # biotype
         for biotype in {x['transcript_biotype'] for x in ANN_SET}:
-            sfs_out['biotype_' + biotype].folded.update([mac])
-            sfs_out['biotype_' + biotype].unfolded.update([oac])
+            if biotype:
+                sfs_out['biotype_' + biotype].folded.update([mac])
+                sfs_out['biotype_' + biotype].unfolded.update([oac])
 
         # chromosome
         chrom = line.split("\t")[0]
@@ -142,10 +148,9 @@ for line in sys.stdin:
 
         # Arms vs. Centers (defined by Rockman)
         aoc = arm_or_center(sp_line[0], int(sp_line[1]))
-        sfs_out['chrom_' + aoc].folded.update([mac])
-        sfs_out['chrom_' + aoc].unfolded.update([oac])
-        print(aoc)
-
+        if aoc in ['arm', 'center']:
+            sfs_out['chrom_' + aoc].folded.update([mac])
+            sfs_out['chrom_' + aoc].unfolded.update([oac])
 
 
         # match HGVS change and calculate degeneracy
