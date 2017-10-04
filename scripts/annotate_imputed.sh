@@ -7,6 +7,10 @@ release='20170531'
 curl http://storage.googleapis.com/elegansvariation.org/releases/${release}/tajima/WI.${release}.tajima.bed.gz > ${base_path}/data/tajima.bed.gz
 curl http://storage.googleapis.com/elegansvariation.org/releases/${release}/tajima/WI.${release}.tajima.bed.gz.tbi > ${base_path}/data/tajima.bed.gz.tbi
 
+# Get orthologs
+wget ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/annotation/orthologs/c_elegans.current.orthologs.txt.gz -O ${base_path}/data/orthologs.gz
+
+
 # Pull out operons
 zcat ${base_path}/data/WS256.annotations.gff3.gz | awk -v OFS="\t" '$0 ~ "operon" { print $1, $4, $5, "TRUE" }' | bgzip > ${base_path}/data/operons.bed.gz
 tabix -p bed ${base_path}/data/operons.bed.gz
