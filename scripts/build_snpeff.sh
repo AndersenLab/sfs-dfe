@@ -14,7 +14,7 @@ wget -O ${genome_path}/${build}/sequences.fa.gz ftp://ftp.wormbase.org/pub/wormb
 # Extract sequence
 gzcat ${genome_path}/${build}/sequences.fa.gz > ${genome_path}/${build}/sequences.fa
 # Download and extract protein fasta file
-wget -O ${genome_path}/${build}/protein.fa.gz ftp://ftp.wormbase.org/pub/wormbase/releases/WS256/species/c_elegans/PRJNA13758/c_elegans.PRJNA13758.WS256.protein.fa.gz 
+wget -O ${genome_path}/${build}/protein.fa.gz ftp://ftp.wormbase.org/pub/wormbase/releases/${build}/species/c_elegans/PRJNA13758/c_elegans.PRJNA13758.${build}.protein.fa.gz 
 gzcat ${genome_path}/${build}/protein.fa.gz > ${genome_path}/${build}/protein.fa
 # Download gtf
 wget -O ${genome_path}/${build}/genes.gtf.gz ftp://ftp.wormbase.org/pub/wormbase/releases/${build}/species/c_elegans/PRJNA13758/c_elegans.PRJNA13758.${build}.canonical_geneset.gtf.gz
