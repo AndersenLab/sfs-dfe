@@ -97,15 +97,6 @@ process lastz {
 		set val(chrom), file("${chrom}.rdotplot") into dotplots
 		set file("${chrom}.vcf.gz") into vcf_by_chrom
 
-	script:
-		if (chrom == 'MtDNA') {
-			range = ""
-		} else {
-			//range = "[34000..4000000]"
-			range = ""
-		}
-
-
 	"""
         # Call variants
 		lastz_D --format=sam \\
@@ -115,9 +106,9 @@ process lastz {
 			  --chain \\
 			  --gapped \\
               --scores=${chrom}.lastz.scores \\
-			  ${ce}${range} \\
+			  ${ce} \\
 			  ${sp34} | \\
-		samtools mpileup --fasta-ref ~/.genome/WS245/WS245.fa.gz -g - | \\
+		samtools mpileup --fasta-ref ${reference} -g - | \\
 		bcftools call -O v -c --pval-threshold 1.0 \\
 					  --targets-file ${target_file} - | \\
 		awk '{ gsub("0/1", "1/1", \$0); print }' | \\
@@ -139,14 +130,6 @@ process lastz_by_chrom {
     output:
         file("${chrom}.tsv") into lastz_summary_ch
 
-    script:
-        if (chrom == 'MtDNA') {
-            range = ""
-        } else {
-            //range = "[34000..4000000]"
-            range = ""
-        }
-
     """
         lastz_D --step=50 \\
               --format=sam \\
@@ -155,7 +138,7 @@ process lastz_by_chrom {
               --gapped \\
               --scores=${chrom}.lastz.scores \\
               --format=general:name1,name2,strand1,strand2,start1,end1,start2,end2,size1,size2,length1,length2,nmatch,ngap,identity,continuity,coverage \\
-              ${ce}${range} \\
+              ${ce} \\
               ${sp34} > ${chrom}.tsv
     """
 
