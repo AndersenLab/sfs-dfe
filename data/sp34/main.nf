@@ -60,7 +60,7 @@ lastz_start = ce_ch
 
 process lastz_infer_scores {
 
-    publishDir results_dir + '/lastz', mode: 'copy', pattern = '*.lastz.scores'
+    publishDir results_dir + '/lastz', mode: 'copy', pattern: '*.lastz.scores'
 
     tag { chrom }
 
