@@ -95,7 +95,7 @@ process lastz {
 
 	output:
 		set val(chrom), file("${chrom}.rdotplot") into dotplots
-		set file("${chrom}.vcf.gz") into vcf_by_chrom
+		file("${chrom}.vcf.gz") into vcf_by_chrom
 
 	"""
         # Call variants
