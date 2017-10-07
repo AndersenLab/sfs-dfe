@@ -2,6 +2,7 @@
 /*
 	Setup Genomes
 */
+reference = config.reference
 results_dir = 'results'
 target_file = file("data/sitelist.tsv.gz")
 
@@ -53,11 +54,35 @@ mito_chrom
 	.choice(ce_ch, sp34_ch) { sp -> sp[0] == 'ce' ? 0 : 1 }
 
 // Combine by chromosome
-by_chrom_ch = ce_ch
-                  .phase(sp34_ch) { it -> it[1] }
-                  .map { it -> [it[0][1], it[0][2], it[1][2]] }
+lastz_start = ce_ch
+  .phase(sp34_ch) { it -> it[1] }
+  .map { it -> [it[0][1], it[0][2], it[1][2]] }
 
+process lastz_infer_scores {
 
+    publishDir results_dir + '/lastz', mode: 'copy', pattern = '*.lastz.scores'
+
+    tag { chrom }
+
+    input:
+        set val(chrom), file(ce), file(sp34) from lastz_start
+    output:
+        set val(chrom), file(ce), file(sp34), file("${chrom}.lastz.scores") into lastz_scored
+
+    """
+    lastz_D --step=50 \\
+          --infscores \\
+          --inferonly \\
+          --gfextend \\
+          --chain \\
+          --gapped \\
+          ${ce} \\
+          ${sp34} > ${chrom}.lastz.scores
+    """
+
+}
+
+lastz_scored.into { lastz_variant_ch; lastz_by_chrom_in}
 
 process lastz {
 
@@ -66,7 +91,7 @@ process lastz {
 	tag { chrom }
 
 	input:
-		set val(chrom), file(ce), file(sp34) from by_chrom_ch
+		set val(chrom), file(ce), file(sp34), file("${chrom}.lastz.scores") from lastz_variant_ch
 
 	output:
 		set val(chrom), file("${chrom}.rdotplot") into dotplots
@@ -82,12 +107,14 @@ process lastz {
 
 
 	"""
-		lastz --step=50 \\
-			  --format=sam \\
+        # Call variants
+		lastz_D --format=sam \\
+              --step=50 \\
 			  --rdotplot=${chrom}.rdotplot \\
 			  --gfextend \\
 			  --chain \\
 			  --gapped \\
+              --scores=${chrom}.lastz.scores \\
 			  ${ce}${range} \\
 			  ${sp34} | \\
 		samtools mpileup --fasta-ref ~/.genome/WS245/WS245.fa.gz -g - | \\
@@ -100,12 +127,82 @@ process lastz {
 
 }
 
+process lastz_by_chrom {
+
+
+    publishDir results_dir + '/summary', mode: 'copy'
+    tag { chrom }
+
+    input:
+        set val(chrom), file(ce), file(sp34), file("${chrom}.lastz.scores") from lastz_by_chrom_in
+
+    output:
+        file("${chrom}.tsv") into lastz_summary_ch
+
+    script:
+        if (chrom == 'MtDNA') {
+            range = ""
+        } else {
+            //range = "[34000..4000000]"
+            range = ""
+        }
+
+    """
+        lastz_D --step=50 \\
+              --format=sam \\
+              --gfextend \\
+              --chain \\
+              --gapped \\
+              --scores=${chrom}.lastz.scores \\
+              --format=general:name1,name2,strand1,strand2,start1,end1,start2,end2,size1,size2,length1,length2,nmatch,ngap,identity,continuity,coverage \\
+              ${ce}${range} \\
+              ${sp34} > ${chrom}.tsv
+    """
+
+}
+
+process summarize_lastz {
+
+    publishDir results_dir + '/summary', mode: 'copy'
+
+    input:
+        file("*.tsv") from lastz_summary_ch.collect()
+    output:
+        file("lastz_summary.tsv")
+
+    '''
+    #!/usr/bin/env Rscript --vanilla
+    library(tidyverse)
+    ch <- lapply(
+            list.files(pattern="*.tsv"),
+            readr::read_tsv
+    ) %>% dplyr::bind_rows() %>%
+      dplyr::rename(chrom = `#name1`) %>%
+      dplyr::mutate(idPct = as.numeric(gsub('%','',idPct)),
+                    conPct = as.numeric(gsub('%','',conPct)))
+
+    # Summary stats
+    chroms = list("I"=1, "II"=2, "III"=3, "IV"=4, "V"=5, "X"=6, "MtDNA"=7)
+    ch_summary <- ch %>% 
+      dplyr::group_by(chrom) %>%
+      dplyr::summarize(syntenic_coverage = sum(nmatch)/sum(length1),
+                       mean_identity = mean(idPct),
+                       mean_continuity = mean(conPct)) %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(chrom_rank = chroms[[chrom]]) %>%
+      dplyr::arrange(chrom_rank) %>%
+      dplyr::select(-chrom_rank) %>%
+      readr::write_tsv("lastz_summary.tsv")
+      '''
+
+}
+
 process concatenate_vcf {
 
 	publishDir results_dir + '/vcf', mode: 'copy', pattern: '*.vcf.gz'
 
 	input:
-		file(chrom_set) from vcf_by_chrom.toSortedList()
+		file(chrom_set) from vcf_by_chrom.collect()
 
 	output:
 		file("merged.vcf.gz")
