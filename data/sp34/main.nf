@@ -70,8 +70,7 @@ process lastz_infer_scores {
         set val(chrom), file(ce), file(sp34), file("${chrom}.lastz.scores") into lastz_scored
 
     """
-    lastz_D --step=50 \\
-          --infscores \\
+    lastz_D --infscores \\
           --inferonly \\
           --gfextend \\
           --chain \\
@@ -100,7 +99,6 @@ process lastz {
 	"""
         # Call variants
 		lastz_D --format=sam \\
-              --step=50 \\
 			  --rdotplot=${chrom}.rdotplot \\
 			  --gfextend \\
 			  --chain \\
@@ -131,8 +129,7 @@ process lastz_by_chrom {
         file("${chrom}.tsv") into lastz_summary_ch
 
     """
-        lastz_D --step=50 \\
-              --format=sam \\
+        lastz_D --format=sam \\
               --gfextend \\
               --chain \\
               --gapped \\
