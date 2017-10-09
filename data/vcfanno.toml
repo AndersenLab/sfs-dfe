@@ -1,0 +1,13 @@
+[[annotation]]
+file="tajima.bed.gz"
+columns=[6]
+names=["tajima"]
+ops=["mean"]
+type="FLOAT"
+
+[[annotation]]
+file="operons.bed.gz"
+columns=[4]
+names=["operon"]
+ops=["flag"]
+type="STRING"

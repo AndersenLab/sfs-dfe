@@ -18,6 +18,10 @@ tabix -p bed ${base_path}/data/operons.bed.gz
 wget ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/annotation/RNASeq_controls_FPKM/c_elegans.canonical_bioproject.current_development.RNASeq_controls_FPKM.dat -O ${base_path}/data/RNASeq_FPKM.txt
 Rscript ${base_path}/scripts/process_RNAseq_data.R
 
+# Download dauer data and analyze (doi: 10.1242/dev.00363; http://dev.biologists.org/content/130/8/1621)
+wget http://dev.biologists.org/highwire/filestream/1201065/field_highwire_adjunct_files/6/TableS4.xls -O ${base_path}/data/dauer_genes.xls
+Rscript ${base_path}/scripts/process_dauer.R
+
 # Merge in sp_34
 bcftools reheader -s <(echo 'sp34') ${base_path}/data/sp34_results/vcf/merged.vcf.gz | \
 bcftools view -O v | sed 's/\//|/g' | \

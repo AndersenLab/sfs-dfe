@@ -1,0 +1,2 @@
+#name1	name2	strand1	strand2	start1	end1	start2	end2	size1	size2	length1	length2	nmatch	ngap	identity	idPct	continuity	conPct	coverage	covPct
+MtDNA	CSP34.Sp34_mitochondrion	+	+	3425	13710	8	10268	13794	13708	10286	10261	8570	28	8570/10195	84.1%	10195/10352	98.5%	10261/13708	74.9%

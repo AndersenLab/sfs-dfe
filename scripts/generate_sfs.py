@@ -48,6 +48,10 @@ codons = [a+b+c for a in bases for b in bases for c in bases]
 amino_acids = 'FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
 codon_table = dict(zip(codons, amino_acids))
 
+# Load dauer genes
+with open(repo_path() + "/data/dauer_genes.txt", 'r') as f:
+    dauer_genes = [x.strip() for x in f.readlines()]
+
 sfs_out = defaultdict(sfs)
 
 # chrom : left tip, left arm, center, right arm, right tip
@@ -160,6 +164,15 @@ for line in sys.stdin:
             if biotype:
                 sfs_out['biotype_' + biotype].update_sfs([minor_allele_count], [ancestral_allele_count])
 
+        # dauer genes
+        for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
+            if len({x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}) > 1:
+                print({x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'})
+            if gene in dauer_genes:
+                sfs_out['dauer_yes'].update_sfs([minor_allele_count], [ancestral_allele_count])
+            else:
+                sfs_out['dauer_no']
+
         # chromosome
         chrom = line.split("\t")[0]
         sfs_out['chrom_' + chrom].update_sfs([minor_allele_count], [ancestral_allele_count])
@@ -195,6 +208,7 @@ for line in sys.stdin:
             tbin = list(TAJIMA_BINS.keys())[bi]
             sfs_out['tajima_' + tbin].update_sfs([minor_allele_count], [ancestral_allele_count])
         
+
         # match HGVS change and calculate degeneracy
         m = re.match(".*\|([A-Za-z]{3})/([A-Za-z]{3})\|.*", line)
         if m:

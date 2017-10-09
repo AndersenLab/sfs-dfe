@@ -1,0 +1,12 @@
+# (a LASTZ scoring set, created by "LASTZ --infer")
+
+bad_score          = X:-1425 # used for sub[X][*] and sub[*][X]
+fill_score         = -143    # used when sub[*][*] not otherwise defined
+gap_open_penalty   = 463
+gap_extend_penalty = 35
+
+      A     C     G     T
+A    81  -123   -68  -117
+C  -123   100  -143   -68
+G   -68  -143   100  -123
+T  -117   -68  -123    81
