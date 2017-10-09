@@ -4,14 +4,15 @@ import sys
 import math
 import re
 import csv
+import bisect
 from collections import Counter
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import chain
 from granthem import granthem, three_letter_to_one
-
 from os.path import dirname
 from subprocess import Popen, PIPE
 from pprint import pprint as pp
+
 
 
 def repo_path():
@@ -27,9 +28,18 @@ def repo_path():
 # outgroup (QX1211)
 
 class sfs:
+
+    ancestral_allele = None
+
     def __init__(self):
         self.folded = Counter()
         self.unfolded = Counter()
+
+    def update_sfs(self, fold_freq, unfold_freq):
+        self.folded.update(fold_freq)
+        if sfs.ancestral_allele != './.':
+            self.unfolded.update(unfold_freq)
+
 
 
 # Open codon table
@@ -104,54 +114,60 @@ ANN_header = ["allele",
               "distance_to_feature",
               "error"]
 
+TAJIMA_BINS = OrderedDict(
+                [
+                    ['lt_neg_2', -2],
+                    ['neg_2_to_0', 0],
+                    ['0_to_2', 2],
+                    ['gt_2', 10]
+                ]
+                )
+
 for line in sys.stdin:
     if line.startswith("#CHROM"):
         samples = line.strip().split("\t")[9:]
-        outgroup = "QX1211"
+        outgroup = "sp34"
         outgroup_index = samples.index(outgroup)
-    if not line.startswith("#"):
+    if not line.startswith("#") and line.count("./.") <= 1:
         sp_line = line.split("\t")
         gts = line.strip().split("\t")[9:]
+        gts = [x.split(":")[0] for x in gts]
         gt_count = Counter(gts)
-        mac = min(gt_count.values())
-        # Use derived allele
-        oac = len(gts) - gts.count(gts[outgroup_index]) - 1
+        minor_allele_count = min(gt_count.values())
+        
+        # Anestral allele
+        ancestral_allele_count = len(gts) - gts.count(gts[outgroup_index]) - 1
+
+        sfs.ancestral_allele = gts[outgroup_index]
 
         # Whole sfs
-        sfs_out['all_sites'].folded.update([mac])
-        sfs_out['all_sites'].unfolded.update([oac])
-
+        sfs_out['all_sites'].folded.update([minor_allele_count])
+        sfs_out['all_sites'].unfolded.update([ancestral_allele_count])
         INFO = [x.split("=")[1] for x in line.split("\t")[7].split(";") if x.split("=")[0] == "ANN"][0]
         ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in INFO.split(",")]
 
-
-        for effect in {sum([x['effect'].split("&") for x in ANN_SET], [])}:
+        for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
             if effect:
-                sfs_out['effect_' + effect].folded.update([mac])
-                sfs_out['effect_' + effect].unfolded.update([oac])
+                sfs_out['effect_' + effect].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # impact
         for impact in {x['impact'] for x in ANN_SET}:
             if impact:
-                sfs_out['impact_' + impact].folded.update([mac])
-                sfs_out['impact_' + impact].unfolded.update([oac])
+                sfs_out['impact_' + impact].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # biotype
         for biotype in {x['transcript_biotype'] for x in ANN_SET}:
             if biotype:
-                sfs_out['biotype_' + biotype].folded.update([mac])
-                sfs_out['biotype_' + biotype].unfolded.update([oac])
+                sfs_out['biotype_' + biotype].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # chromosome
         chrom = line.split("\t")[0]
-        sfs_out['chrom_' + chrom].folded.update([mac])
-        sfs_out['chrom_' + chrom].unfolded.update([oac])
+        sfs_out['chrom_' + chrom].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # Arms vs. Centers (defined by Rockman)
         aoc = arm_or_center(sp_line[0], int(sp_line[1]))
         if aoc in ['arm', 'center']:
-            sfs_out['chrom_' + aoc].folded.update([mac])
-            sfs_out['chrom_' + aoc].unfolded.update([oac])
+            sfs_out['chrom_' + aoc].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         def extract_aa(aa_change):
             aa1, aa2 = re.split('[0-9]+', aa_change[2:])
@@ -162,22 +178,23 @@ for line in sys.stdin:
 
         # Gene flags
         if 'operon' in sp_line[7]:
-            sfs_out['gene_operon'].folded.update([mac])
-            sfs_out['gene_operon'].unfolded.update([oac])
+            sfs_out['gene_operon'].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # Granthem score (non-synonymous only)
         for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
             if x in granthem.keys() and x[0] != x[1]:
                 g = granthem[x]
-                g_out = int(math.floor(g/40.0)*40)
-                sfs_out['granthem_' + g_out].folded.update([mac])
-                sfs_out['granthem_' + g_out].unfolded.update([oac])
+                g_out = str(int(math.floor(g/40.0)*40))
+                sfs_out['granthem_' + g_out].update_sfs([minor_allele_count], [ancestral_allele_count])
 
-        #print({re.split('[0-9]+', x['aa_change']) for x in ANN_SET if x['aa_change']})
-        #if m:
-        #    print(m.group(1))
-        #    print(m.group(2))
-
+        # Tajima's D
+        m = re.match(".*tajima=([\-0-9\.]+);.*", line)
+        if m:
+            tajima = float(m.group(1))
+            bi = bisect.bisect_right(sorted(TAJIMA_BINS.values()), tajima)
+            tbin = list(TAJIMA_BINS.keys())[bi]
+            sfs_out['tajima_' + tbin].update_sfs([minor_allele_count], [ancestral_allele_count])
+        
         # match HGVS change and calculate degeneracy
         m = re.match(".*\|([A-Za-z]{3})/([A-Za-z]{3})\|.*", line)
         if m:
@@ -195,8 +212,8 @@ for line in sys.stdin:
                 degeneracy = 0
 
             site_type = f"{degeneracy}"
-            sfs_out['fold_' + site_type].folded.update([mac])
-            sfs_out['fold_' + site_type].unfolded.update([oac])
+            sfs_out['fold_' + site_type].folded.update([minor_allele_count])
+            sfs_out['fold_' + site_type].unfolded.update([ancestral_allele_count])
 
 
 
