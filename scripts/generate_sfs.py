@@ -8,7 +8,7 @@ import bisect
 from collections import Counter
 from collections import defaultdict, OrderedDict
 from itertools import chain
-from granthem import granthem, three_letter_to_one
+from Grantham import Grantham, three_letter_to_one
 from os.path import dirname
 from subprocess import Popen, PIPE
 from pprint import pprint as pp
@@ -193,12 +193,12 @@ for line in sys.stdin:
         if 'operon' in sp_line[7]:
             sfs_out['gene_operon'].update_sfs([minor_allele_count], [ancestral_allele_count])
 
-        # Granthem score (non-synonymous only)
+        # Grantham score (non-synonymous only)
         for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
-            if x in granthem.keys() and x[0] != x[1]:
-                g = granthem[x]
+            if x in Grantham.keys() and x[0] != x[1]:
+                g = Grantham[x]
                 g_out = str(int(math.floor(g/40.0)*40))
-                sfs_out['granthem_' + g_out].update_sfs([minor_allele_count], [ancestral_allele_count])
+                sfs_out['Grantham_' + g_out].update_sfs([minor_allele_count], [ancestral_allele_count])
 
         # Tajima's D
         m = re.match(".*tajima=([\-0-9\.]+);.*", line)
