@@ -55,7 +55,7 @@ read_sfs <- function(infile) {
 
 data <- dplyr::bind_rows(
            lapply(
-                list.files(glue::glue("results/{outgroup/"),
+                list.files(glue::glue("results/{outgroup}/"),
                            pattern = "*sfs",
                            full.names = T),
                 read_sfs)
