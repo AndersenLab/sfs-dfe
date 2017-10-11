@@ -5,6 +5,7 @@ import math
 import re
 import csv
 import bisect
+import sys
 from collections import Counter
 from collections import defaultdict, OrderedDict
 from itertools import chain
@@ -13,7 +14,7 @@ from os.path import dirname
 from subprocess import Popen, PIPE
 from pprint import pprint as pp
 
-
+outgroup = sys.argv[1]
 
 def repo_path():
     path = Popen(['git', 'rev-parse', '--show-toplevel'],
@@ -25,7 +26,6 @@ def repo_path():
 
 # Unfolded
 # Number of strains that share allele with
-# outgroup (QX1211)
 
 class sfs:
 
@@ -130,7 +130,7 @@ TAJIMA_BINS = OrderedDict(
 for line in sys.stdin:
     if line.startswith("#CHROM"):
         samples = line.strip().split("\t")[9:]
-        outgroup = "sp34"
+        outgroup = outgroup
         outgroup_index = samples.index(outgroup)
     if not line.startswith("#") and line.count("./.") <= 1:
         sp_line = line.split("\t")
@@ -234,7 +234,7 @@ for line in sys.stdin:
 
 for k, v in sfs_out.items():
     for sfs_type in ['folded', 'unfolded']:
-        with open(f'{repo_path()}/results/{k}_{sfs_type}.sfs', 'w') as f:
+        with open(f'{repo_path()}/results/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
             n = len(samples)
             chrom_count = {'folded': math.floor(n / 2),
                            'unfolded': n - 1}[sfs_type]
