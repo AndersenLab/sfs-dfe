@@ -15,6 +15,8 @@ output:
 try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
 setwd(system("git rev-parse --show-toplevel", intern=T))
 
+outgroup = commandArgs(trailingOnly=TRUE)
+
 opts_knit$set(progress=TRUE)
 
 opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, print=FALSE, verbose=TRUE)
@@ -53,7 +55,7 @@ read_sfs <- function(infile) {
 
 data <- dplyr::bind_rows(
            lapply(
-                list.files("results/",
+                list.files(glue::glue("results/{outgroup/"),
                            pattern = "*sfs",
                            full.names = T),
                 read_sfs)

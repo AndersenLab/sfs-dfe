@@ -19,7 +19,7 @@ three_letter_to_one = {"Ala":"A",
 "Tyr":"Y",
 "Val":"V"}
 
-granthem = { 
+grantham = { 
   ('A', 'A'): 0,
   ('A', 'C'): 195,
   ('A', 'D'): 126,

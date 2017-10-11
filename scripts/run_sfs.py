@@ -9,7 +9,7 @@ import sys
 from collections import Counter
 from collections import defaultdict, OrderedDict
 from itertools import chain
-from Grantham import Grantham, three_letter_to_one
+from grantham import grantham, three_letter_to_one
 from os.path import dirname
 from subprocess import Popen, PIPE
 from pprint import pprint as pp
@@ -49,7 +49,7 @@ amino_acids = 'FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
 codon_table = dict(zip(codons, amino_acids))
 
 # Load dauer genes
-with open(repo_path() + "/data/dauer_genes.txt", 'r') as f:
+with open(repo_path() + "/data/gene_set/dauer_genes.txt", 'r') as f:
     dauer_genes = [x.strip() for x in f.readlines()]
 
 sfs_out = defaultdict(sfs)
@@ -166,8 +166,6 @@ for line in sys.stdin:
 
         # dauer genes
         for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
-            if len({x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}) > 1:
-                print({x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'})
             if gene in dauer_genes:
                 sfs_out['dauer_yes'].update_sfs([minor_allele_count], [ancestral_allele_count])
             else:
@@ -195,8 +193,8 @@ for line in sys.stdin:
 
         # Grantham score (non-synonymous only)
         for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
-            if x in Grantham.keys() and x[0] != x[1]:
-                g = Grantham[x]
+            if x in grantham.keys() and x[0] != x[1]:
+                g = grantham[x]
                 g_out = str(int(math.floor(g/40.0)*40))
                 sfs_out['Grantham_' + g_out].update_sfs([minor_allele_count], [ancestral_allele_count])
 
