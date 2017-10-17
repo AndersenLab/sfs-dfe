@@ -89,7 +89,7 @@ fi
 if [ ! -s vcf/WI.${CENDR_RELEASE}.sp34.impute.vcf.gz.csi ];
 then
     # First merge
-    bcftools reheader -s <(echo 'sp34') sp34_results/vcf/merged.vcf.gz | \
+    bcftools reheader -s <(echo 'sp34') ${base_path}/data/sp34_results/vcf/merged.vcf.gz | \
     bcftools view -O v | sed 's/\//|/g' | \
     bcftools view -O z  > sp34_results/vcf/sp34.vcf.gz
     bcftools index sp34_results/vcf/sp34.vcf.gz
@@ -102,10 +102,10 @@ then
 fi
 
 # Annotate sp34 VCF
-if [ ! -s vcf/WI.${CENDR_RELEASE}.impute.sp34.snpeff.vcf.gz.csi ]
+if [ ! -s vcf/WI.${CENDR_RELEASE}.sp34.impute.snpeff.vcf.gz.csi ]
 then
     # Perform snpeff annotation for sp34 VCF
-    vcfanno vcfanno.toml vcf/WI.${CENDR_RELEASE}.sp34.impute.vcf.gz | \
+    vcfanno -p 8 vcfanno.toml vcf/WI.${CENDR_RELEASE}.sp34.impute.vcf.gz | \
     bcftools filter --set-GTs . --include 'GT != "0|1"' | \
     # Used to determine location of promoter
     snpeff eff -upDownStreamLen 2000 ${SNPEFF_BUILD} - | \
@@ -118,9 +118,9 @@ fi
 # SnpEff VCF #
 #============#
 
-if [ ! -s vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ];
+if [ ! -s vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz.csi ];
 then
-    vcfanno vcfanno.toml ${IMPUTE_VCF} | \
+    vcfanno -p 8 vcfanno.toml ${IMPUTE_VCF} | \
     bcftools filter --set-GTs . --include 'GT != "0|1"' | \
     # Used to determine location of promoter
     snpeff eff -upDownStreamLen 2000 ${SNPEFF_BUILD} - | \

@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-
+set -e
 base_path=`git rev-parse --show-toplevel`
 
 mkdir -p ${base_path}/results/sp34
