@@ -110,6 +110,7 @@ then
     # Used to determine location of promoter
     snpeff eff -upDownStreamLen 2000 ${SNPEFF_BUILD} - | \
     snpeff eff -upDownStreamLen 2000 -classic -geneId -oicr ${SNPEFF_BUILD} - | \
+    vcffixup - | \
     bcftools view -O z >  vcf/WI.${CENDR_RELEASE}.sp34.impute.snpeff.vcf.gz
     bcftools index -f vcf/WI.${CENDR_RELEASE}.sp34.impute.snpeff.vcf.gz
 fi
@@ -125,6 +126,7 @@ then
     # Used to determine location of promoter
     snpeff eff -upDownStreamLen 2000 ${SNPEFF_BUILD} - | \
     snpeff eff -upDownStreamLen 2000 -classic -geneId -oicr ${SNPEFF_BUILD} - | \
+    vcffixup - | \
     bcftools view -O z > vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz
     bcftools index -f vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz
 fi

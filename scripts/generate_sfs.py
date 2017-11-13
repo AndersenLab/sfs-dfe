@@ -67,6 +67,14 @@ for k, v in chrom_arm_center.items():
                            sum(v[0:3]) * 1e3)
 
 
+def extract_aa(aa_change):
+    aa1, aa2 = re.split('[0-9]+', aa_change[2:])
+    try:
+        return (three_letter_to_one[aa1], three_letter_to_one[aa2],)
+    except:
+        pass
+
+
 def arm_or_center(chrom, pos):
     if chrom == 'MtDNA':
         return None
@@ -116,30 +124,50 @@ ANN_header = ["allele",
               "distance_to_feature",
               "error"]
 
+
+biotypes = ['protein_coding',
+            'pseudogene',
+            'ncRNA',
+            'miRNA',
+            'piRNA',
+            'tRNA',
+            'lincRNA',
+            'rRNA',
+            'scRNA',
+            'snoRNA',
+            'snRNA',
+            'asRNA',
+            'Coding',
+            'Noncoding']
+
+
 TAJIMA_BINS = OrderedDict(
                 [
-                    ['lt_neg_2', -2],
-                    ['neg_2_to_0', 0],
-                    ['0_to_2', 2],
-                    ['gt_2', 10]
+                    ['tajima__lt_neg_2', -2],
+                    ['tajima__neg_2_to_0', 0],
+                    ['tajima__0_to_2', 2],
+                    ['tajima__gt_2', 10]
                 ]
                 )
 
+TF = {0: "F", 1: "T"}
 
 vcf = VCF("-")
 samples = vcf.samples
 outgroup_index = samples.index(outgroup)
 sample_len = len(samples)
 
+header_printed = False
+
 for line in vcf:
     line_str = str(line)
     if not line_str.startswith("#") and line_str.count("./.") == 0:
         # Get Allele Counts
-        ancestral_allele_count = sum(i.gt_types[outgroup_index] == i.gt_types) - 1 # Subtract one for outgroup
-        if sum(i.gt_types == 0) <= sum(i.gt_types == 3):
-            minor_allele_count = sum(i.gt_types == 0)
+        ancestral_allele_count = sum(line.gt_types[outgroup_index] == line.gt_types) - 1 # Subtract one for outgroup
+        if sum(line.gt_types == 0) <= sum(line.gt_types == 3):
+            minor_allele_count = sum(line.gt_types == 0)
         else:
-            minor_allele_count = sum(i.gt_types == 3)
+            minor_allele_count = sum(line.gt_types == 3)
 
         out = OrderedDict([
                 ('chrom', line.CHROM),
@@ -150,77 +178,13 @@ for line in vcf:
                 ('N_GT', sample_len)
               ])
 
-        # Add a column for every site type.
-        out.update(list(zip(site_types, len(site_types)*[False])))
-
-        #=====#
-        # ANN #
-        #=====#
-
-        dict(i.INFO)['ANN'].split("|")
-        ANN = i.INFO.get("ANN")
-        if ANN:
-            ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in ANN.split(",")]
-
-        for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
-            out[effect] = True
-
-
-        # impact
-        for impact in {x['impact'] for x in ANN_SET}:
-            if impact:
-                sfs_out['impact_' + impact].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        # biotype
-        for biotype in {x['transcript_biotype'] for x in ANN_SET}:
-            if biotype:
-                sfs_out['biotype_' + biotype].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        # dauer genes
-        for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
-            if gene in dauer_genes:
-                sfs_out['dauer_yes'].update_sfs([minor_allele_count], [ancestral_allele_count])
-            else:
-                sfs_out['dauer_no']
-
-        # chromosome
-        chrom = line.split("\t")[0]
-        sfs_out['chrom_' + chrom].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        # Arms vs. Centers (defined by Rockman)
-        aoc = arm_or_center(sp_line[0], int(sp_line[1]))
-        if aoc in ['arm', 'center']:
-            sfs_out['chrom_' + aoc].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        def extract_aa(aa_change):
-            aa1, aa2 = re.split('[0-9]+', aa_change[2:])
-            try:
-                return (three_letter_to_one[aa1], three_letter_to_one[aa2],)
-            except:
-                pass
-
-        # Gene flags
-        if 'operon' in sp_line[7]:
-            sfs_out['gene_operon'].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        # Grantham score (non-synonymous only)
-        for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
-            if x in grantham.keys() and x[0] != x[1]:
-                g = grantham[x]
-                g_out = str(int(math.floor(g/40.0)*40))
-                sfs_out['Grantham_' + g_out].update_sfs([minor_allele_count], [ancestral_allele_count])
-
-        # Tajima's D
-        m = re.match(".*tajima=([\-0-9\.]+);.*", line)
-        if m:
-            tajima = float(m.group(1))
-            bi = bisect.bisect_right(sorted(TAJIMA_BINS.values()), tajima)
-            tbin = list(TAJIMA_BINS.keys())[bi]
-            sfs_out['tajima_' + tbin].update_sfs([minor_allele_count], [ancestral_allele_count])
-        
-
+        #==============#
+        # Degeneracy   #
+        #==============#
         # match HGVS change and calculate degeneracy
-        m = re.match(".*\|([A-Za-z]{3})/([A-Za-z]{3})\|.*", line)
+        fold_set = list(map(str, range(0,5)))
+        out.update(list(zip(["fold__" + x for x in fold_set], len(fold_set)*[False])))
+        m = re.match(".*\|([A-Za-z]{3})/([A-Za-z]{3})\|.*", line_str)
         if m:
             codon = m.group(1)
             pos = [codon.index(x) for x in 'ATCG' if x in codon][0]
@@ -236,51 +200,101 @@ for line in vcf:
                 degeneracy = 0
 
             site_type = str(degeneracy)
-            sfs_out['fold_' + site_type].folded.update([minor_allele_count])
-            sfs_out['fold_' + site_type].unfolded.update([ancestral_allele_count])
+            out['fold__' + site_type]
+
+        #=====#
+        # ANN #
+        #=====# 
+
+        ANN = line.INFO.get("ANN")
+        if ANN:
+            ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in ANN.split(",")]
 
 
+        #========#
+        # effect #
+        #========#
+
+        # Add a column for every effect type.
+        out.update(list(zip(["effect__" + x for x in site_types], len(site_types)*[False])))
+        for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
+            out["effect__" + effect] = True
+
+        #========#
+        # impact #
+        #========#
+        impact_set = ['MODIFIER', 'LOW', 'MODERATE', 'HIGH']
+        out.update(list(zip(["impact__" + x for x in impact_set], len(impact_set)*[False])))
+        # impact
+        for impact in {x['impact'] for x in ANN_SET}:
+            out["impact__" + impact] = True
+
+        #=========#
+        # biotype #
+        #=========#
+        out.update(list(zip(["biotype__" + x for x in biotypes], len(biotypes)*[False])))
+        for biotype in {x['transcript_biotype'] for x in ANN_SET}:
+            out["biotype__" + impact] = True
 
 
-for k, v in sfs_out.items():
+        #=======#
+        # dauer #
+        #=======#
+        for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
+            if gene in dauer_genes:
+                out['dauer__gene'] = True
+            else:
+                out['dauer__gene'] = False
 
-    # Output format: fitdadi
-    for sfs_type in ['folded', 'unfolded']:
-        with open(f'{repo_path()}/results/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
-            n = len(samples)
-            chrom_count = {'folded': math.floor(n / 2),
-                           'unfolded': n - 1}[sfs_type]
-            f.write(f"{chrom_count} {sfs_type}\n")
-            sfs = getattr(v, sfs_type)
-            # Yes, we include freq 0.
-            freq = map(str, [sfs[x] for x in range(0, chrom_count)])
-            f.write(" ".join(freq) + "\n")
-            mask = [1] + ([0] * (chrom_count - 1))
-            f.write(' '.join(list(map(str, mask))))
 
-    # Output format: DFE-alpha
-    for sfs_type in ['unfolded']:
-        with open(f'{repo_path()}/results/fitdadi/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
-            n = len(samples)
-            chrom_count = {'folded': math.floor(n / 2),
-                           'unfolded': n - 1}[sfs_type]
-            f.write(f"{chrom_count} {sfs_type}\n")
-            sfs = getattr(v, sfs_type)
-            # Yes, we include freq 0.
-            freq = map(str, [sfs[x] for x in range(0, chrom_count)])
-            f.write(" ".join(freq) + "\n")
-            mask = [1] + ([0] * (chrom_count - 1))
-            f.write(' '.join(list(map(str, mask))))
-    with open(f'{repo_path()}/results/multidfe/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
-        n = len(samples)
-        chrom_count = {'folded': math.floor(n / 2),
-                       'unfolded': n - 1}[sfs_type]
-        f.write(f"{n}\n")
-        sfs = getattr(v, sfs_type)
-        # Yes, we include freq 0.
-        freq = map(str, [sfs[x] for x in range(0, chrom_count)])
-        f.write(" ".join(freq) + "\n")
-        mask = [1] + ([0] * (chrom_count - 1))
-        f.write(' '.join(list(map(str, mask))))
+        #==============#
+        # Arm v Center #
+        #==============#
+        # (defined by Rockman)
+        aoc = arm_or_center(line.CHROM, line.POS)
+        out['aoc__arm'] = False
+        out['aoc__center'] = False
+        out['aoc__' + aoc] = True
+        if aoc in ['arm', 'center']:
+            sfs_out['chrom_' + aoc].update_sfs([minor_allele_count], [ancestral_allele_count])
 
-            
+
+        # operon
+        out['operon__operon'] = line.INFO.get("operon") or False
+
+
+        # Grantham score (non-synonymous only)
+        g_bins = 40
+        grantham_set = [str(int(math.floor(g/g_bins*1.0)*g_bins)) for g in range(0,max(grantham.values()),g_bins)]
+        out.update(list(zip(["grantham__" + x for x in grantham_set], len(grantham_set)*[False])))
+        for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
+            if x in grantham.keys() and x[0] != x[1]:
+                g = grantham[x]
+                g_out = str(int(math.floor(g/40.0)*40))
+                out['granthem__' + g_out] = True
+
+        # Tajima's D
+        out.update(list(
+                        zip(
+                                list(TAJIMA_BINS.keys()),
+                                len(TAJIMA_BINS.keys()) * [False]
+                            )
+                       )
+                )
+
+        tajima = line.INFO.get('tajima')
+        if tajima:
+            bi = bisect.bisect_right(sorted(TAJIMA_BINS.values()), tajima)
+            tbin = list(TAJIMA_BINS.keys())[bi]
+            out['tajima__' + tbin] = True
+
+
+        if not header_printed:
+            print('\t'.join(out.keys()))
+            header_printed = True
+        for k, v in out.items():
+            if '__' in k:
+                out[k] = TF[int(v)]
+        print('\t'.join(map(str, out.values())))
+
+
