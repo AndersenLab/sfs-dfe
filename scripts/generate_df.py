@@ -200,7 +200,7 @@ for line in vcf:
                 degeneracy = 0
 
             site_type = str(degeneracy)
-            out['fold__' + site_type]
+            out['fold__' + site_type] = True
 
         #=====#
         # ANN #
