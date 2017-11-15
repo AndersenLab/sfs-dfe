@@ -26,6 +26,7 @@ mkdir -p vcf
 mkdir -p original_vcf
 mkdir -p sfs
 mkdir -p df_outgroup
+mkdir -p spectra
 
 # Fetch imputed VCF
 if [ ! -s ${IMPUTE_VCF} ];
@@ -149,3 +150,10 @@ then
 parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
 parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
 fi
+
+
+#================================#
+# Finally, generate the spectra! #
+#================================#
+
+
