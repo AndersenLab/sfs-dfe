@@ -77,7 +77,7 @@ def extract_aa(aa_change):
 
 def arm_or_center(chrom, pos):
     if chrom == 'MtDNA':
-        return None
+        return False
     ca = chrom_arm_center[chrom]
     if pos > ca[0]:
         c = 'arm'
@@ -254,9 +254,8 @@ for line in vcf:
         aoc = arm_or_center(line.CHROM, line.POS)
         out['aoc__arm'] = False
         out['aoc__center'] = False
-        out['aoc__' + aoc] = True
-        if aoc in ['arm', 'center']:
-            sfs_out['chrom_' + aoc].update_sfs([minor_allele_count], [ancestral_allele_count])
+        if aoc:
+            out['aoc__' + aoc] = True
 
 
         # operon

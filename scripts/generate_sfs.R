@@ -1,24 +1,19 @@
-df <- readr::read_tsv("out.test")
+df <- readr::read_tsv("../")
 
+try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
+setwd(system("git rev-parse --show-toplevel", intern =T))
 
 # Spectra with restricted regions
-
-spectra <- function(df, sfs = TRUE) {
-    dout <- df %>%
+spectra <- function(df) {
+    df %>%
     dplyr::group_by(ancestral_allele_count, add=TRUE) %>%
-    dplyr::summarize(neutral = sum(fold__0), selected = n() - sum(fold__0)) %>%
+    dplyr::summarize(neutral = sum(fold__4), selected = sum(fold__4 == F)) %>%
     dplyr::arrange(ancestral_allele_count)
-    
-    if (sfs == TRUE) {
-      selected <- paste0(dout$selected, collapse = " ")
-      neutral <- paste0(dout$neutral, collapse = " ")
-      dout <- glue::glue("{selected}\n{neutral}")
-    }
-    dout
 }
 
 
 operon = spectra(df %>% dplyr::filter(operon__operon == T))
+
 
 df %>% 
   dplyr::group_by(operon__operon) %>%

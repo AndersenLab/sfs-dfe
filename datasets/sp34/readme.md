@@ -1,1 +1,0 @@
-sp34 data obtained from http://download.caenorhabditis.org/v1/sequence/

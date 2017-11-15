@@ -24,6 +24,8 @@ mkdir -p expression
 mkdir -p gene_set
 mkdir -p vcf
 mkdir -p original_vcf
+mkdir -p sfs
+mkdir -p df_outgroup
 
 # Fetch imputed VCF
 if [ ! -s ${IMPUTE_VCF} ];
@@ -64,12 +66,11 @@ then
 fi
 
 # Download expression data and analyze
-if [ ! -s expression/RNASeq_FPKM.txt.gz ];
+if [ ! -s expression/expression.txt.gz ];
 then
-    wget -O expression/RNASeq_FPKM.txt \
+    wget -O expression/expression.txt \
     ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/annotation/RNASeq_controls_FPKM/c_elegans.canonical_bioproject.current_development.RNASeq_controls_FPKM.dat
-    gzip expression/RNASeq_FPKM.txt
-    rm expression/RNASeq_FPKM.txt
+    gzip expression/expression.txt
     Rscript ${base_path}/scripts/process/expression.R
 fi
 
@@ -129,4 +130,22 @@ then
     vcffixup - | \
     bcftools view -O z > vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz
     bcftools index -f vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz
+fi
+
+#==========================#
+# Generate the output file #
+#==========================#
+
+function generate() {
+    bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz  ${1} | \
+    python ${base_path}/scripts/generate_df.py QX1211
+}
+export -f generate
+export CENDR_RELEASE
+export base_path
+
+if [ ! -s df_outgroup/QX1211.tsv.gz ];
+then
+parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
+parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
 fi
