@@ -223,7 +223,7 @@ for line in sys.stdin:
             if degeneracy == 1:
                 degeneracy = 0
 
-            site_type = f"{degeneracy}"
+            site_type = str(degeneracy)
             sfs_out['fold_' + site_type].folded.update([minor_allele_count])
             sfs_out['fold_' + site_type].unfolded.update([ancestral_allele_count])
 
@@ -231,6 +231,8 @@ for line in sys.stdin:
 
 
 for k, v in sfs_out.items():
+
+    # Output format: fitdadi
     for sfs_type in ['folded', 'unfolded']:
         with open(f'{repo_path()}/results/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
             n = len(samples)
@@ -243,5 +245,30 @@ for k, v in sfs_out.items():
             f.write(" ".join(freq) + "\n")
             mask = [1] + ([0] * (chrom_count - 1))
             f.write(' '.join(list(map(str, mask))))
+
+    # Output format: DFE-alpha
+    for sfs_type in ['unfolded']:
+        with open(f'{repo_path()}/results/fitdadi/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
+            n = len(samples)
+            chrom_count = {'folded': math.floor(n / 2),
+                           'unfolded': n - 1}[sfs_type]
+            f.write(f"{chrom_count} {sfs_type}\n")
+            sfs = getattr(v, sfs_type)
+            # Yes, we include freq 0.
+            freq = map(str, [sfs[x] for x in range(0, chrom_count)])
+            f.write(" ".join(freq) + "\n")
+            mask = [1] + ([0] * (chrom_count - 1))
+            f.write(' '.join(list(map(str, mask))))
+    with open(f'{repo_path()}/results/multidfe/{outgroup}/{k}_{sfs_type}.sfs', 'w') as f:
+        n = len(samples)
+        chrom_count = {'folded': math.floor(n / 2),
+                       'unfolded': n - 1}[sfs_type]
+        f.write(f"{n}\n")
+        sfs = getattr(v, sfs_type)
+        # Yes, we include freq 0.
+        freq = map(str, [sfs[x] for x in range(0, chrom_count)])
+        f.write(" ".join(freq) + "\n")
+        mask = [1] + ([0] * (chrom_count - 1))
+        f.write(' '.join(list(map(str, mask))))
 
             
