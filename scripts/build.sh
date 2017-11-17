@@ -138,17 +138,27 @@ fi
 #==========================#
 
 function generate() {
-    bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz  ${1} | \
-    python ${base_path}/scripts/generate_df.py QX1211
+    echo "RUNNING!!!"
+    bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ${1}:1-10000 | \
+    python ${base_path}/scripts/generate_df.py ${2} > ${base_path}/data/tmp/${1}_${2}.txt
 }
 export -f generate
 export CENDR_RELEASE
 export base_path
 
+mkdir -p ${base_path}/data/tmp
 if [ ! -s df_outgroup/QX1211.tsv.gz ];
 then
-parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
-parallel --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
+    for strain in QX1211 XZ1516; do
+        parallel --verbose generate {} ${strain} ::: I II III IV V X MtDNA
+        c_str="";
+            for chrom in I II III IV V X MtDNA; do
+                c_str="${c_str} ${base_path}/data/tmp/${chrom}_${strain}.txt"
+            done;
+            echo ${c_str}
+            cat ${c_str} | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
+            rm ${c_str};
+    done;
 fi
 
 

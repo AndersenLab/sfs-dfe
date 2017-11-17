@@ -3,16 +3,11 @@
 import sys
 import math
 import re
-import csv
 import bisect
-import sys
 from collections import Counter
 from collections import defaultdict, OrderedDict
-from itertools import chain
 from grantham import grantham, three_letter_to_one
-from os.path import dirname
 from subprocess import Popen, PIPE
-from pprint import pprint as pp
 from cyvcf2 import VCF
 
 outgroup = sys.argv[1]
@@ -49,6 +44,12 @@ codon_table = dict(zip(codons, amino_acids))
 # Load dauer genes
 with open(repo_path() + "/data/gene_set/dauer_genes.txt", 'r') as f:
     dauer_genes = [x.strip() for x in f.readlines()]
+
+# Load expression genes
+expr = {}
+for x in range(1,5):
+    with open(repo_path() + f"/data/expression/q{x}.expression.tsv", 'r') as f:
+        expr[x] = [x.strip() for x in f.readlines()]
 
 sfs_out = defaultdict(sfs)
 
@@ -150,7 +151,10 @@ TAJIMA_BINS = OrderedDict(
                 ]
                 )
 
-TF = {0: "F", 1: "T"}
+g_bins = 40
+grantham_set = [str(int(math.floor(g/g_bins*1.0)*g_bins)) for g in range(0,max(grantham.values()),g_bins)]
+
+TF = {0: "F", 1: "T", False: "F", True: "T"}
 
 vcf = VCF("-")
 samples = vcf.samples
@@ -175,7 +179,8 @@ for line in vcf:
                 ('allele_frequency', line.aaf),
                 ('ancestral_allele_count', ancestral_allele_count),
                 ('minor_allele_count', minor_allele_count),
-                ('N_GT', sample_len)
+                ('N_GT', sample_len),
+                ('outgroup', outgroup)
               ])
 
         #==============#
@@ -226,8 +231,10 @@ for line in vcf:
         impact_set = ['MODIFIER', 'LOW', 'MODERATE', 'HIGH']
         out.update(list(zip(["impact__" + x for x in impact_set], len(impact_set)*[False])))
         # impact
+        out["is__gene"] = False
         for impact in {x['impact'] for x in ANN_SET}:
             out["impact__" + impact] = True
+            out["is__gene"] = True
 
         #=========#
         # biotype #
@@ -240,12 +247,21 @@ for line in vcf:
         #=======#
         # dauer #
         #=======#
+        out['dauer__gene'] = False
         for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
             if gene in dauer_genes:
                 out['dauer__gene'] = True
             else:
                 out['dauer__gene'] = False
 
+        #============#
+        # Expression #
+        #============#
+        for q in range(1,5):
+            out[f'expression__q{q}'] = False
+            for gene in {x['gene_id'] for x in ANN_SET if x['impact'] != 'MODIFIER'}:
+                if gene in expr[q]:
+                    out[f'expression__q{q}'] = True
 
         #==============#
         # Arm v Center #
@@ -261,39 +277,33 @@ for line in vcf:
         # operon
         out['operon__operon'] = line.INFO.get("operon") or False
 
-
         # Grantham score (non-synonymous only)
-        g_bins = 40
-        grantham_set = [str(int(math.floor(g/g_bins*1.0)*g_bins)) for g in range(0,max(grantham.values()),g_bins)]
-        out.update(list(zip(["grantham__" + x for x in grantham_set], len(grantham_set)*[False])))
+        for k in grantham_set:
+            out.update({f"granthem__{k}": False})
         for x in {extract_aa(x['aa_change']) for x in ANN_SET if x['aa_change']}:
             if x in grantham.keys() and x[0] != x[1]:
                 g = grantham[x]
                 g_out = str(int(math.floor(g/40.0)*40))
                 out['granthem__' + g_out] = True
 
+
         # Tajima's D
-        out.update(list(
-                        zip(
-                                list(TAJIMA_BINS.keys()),
-                                len(TAJIMA_BINS.keys()) * [False]
-                            )
-                       )
-                )
+        for k in TAJIMA_BINS.keys():
+            out.update({k: False})
 
         tajima = line.INFO.get('tajima')
         if tajima:
             bi = bisect.bisect_right(sorted(TAJIMA_BINS.values()), tajima)
             tbin = list(TAJIMA_BINS.keys())[bi]
-            out['tajima__' + tbin] = True
+            out[tbin] = True
 
 
-        if not header_printed:
+        if not header_printed and line.CHROM == "I":
             print('\t'.join(out.keys()))
             header_printed = True
         for k, v in out.items():
             if '__' in k:
-                out[k] = TF[int(v)]
+                out[k] = TF[v]
         print('\t'.join(map(str, out.values())))
 
 
