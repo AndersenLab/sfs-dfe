@@ -1,7 +1,12 @@
 try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
 setwd(system("git rev-parse --show-toplevel", intern =T))
 
-df <- readr::read_tsv("data/df_outgroup/QX1211.tsv.gz")
+library(tidyverse)
+library(glue)
+
+outgroup = "QX1211"
+
+df <- readr::read_tsv(glue::glue("data/df_outgroup/{outgroup}.tsv.gz"))
 
 # Spectra with restricted regions
 spectra <- function(df) {
@@ -11,7 +16,26 @@ spectra <- function(df) {
     dplyr::arrange(ancestral_allele_count)
 }
 
-operon = spectra(df %>% dplyr::filter(operon__operon == T))
+multi_dfe_out <- function(df, fname) {
+  writeLines(
+    c(
+      nrow(df),
+      paste(df$selected, collapse =" "),
+      paste(df$neutral, collapse =" ")
+    ),
+    con = glue::glue(fname), 
+    sep = "\n"
+  )
+}
+
+
+spectra(df %>% dplyr::filter(operon__operon == T)) %>%
+        multi_dfe_out(fname="data/spectra/{outgroup}/operon_T.sfs")
+spectra(df %>% dplyr::filter(operon__operon == T)) %>%
+        multi_dfe_out(fname="data/spectra/{outgroup}/operon_F.sfs")
+
+
+
 
 df %>% 
   dplyr::group_by(operon__operon) %>%
