@@ -1,6 +1,5 @@
 
 
-
 config_dat=Channel.fromPath('directory_config.dat')
 
 spectra_QX1211 = Channel.fromPath("QX1211/*.sfs").combine(['QX1211'])

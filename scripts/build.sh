@@ -27,6 +27,8 @@ mkdir -p original_vcf
 mkdir -p sfs
 mkdir -p df_outgroup
 mkdir -p spectra
+mkdir -p spectra/QX1211
+mkdir -p spectra/XZ1516
 
 # Fetch imputed VCF
 if [ ! -s ${IMPUTE_VCF} ];
@@ -138,27 +140,18 @@ fi
 #==========================#
 
 function generate() {
-    echo "RUNNING!!!"
-    bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ${1}:1-10000 | \
-    python ${base_path}/scripts/generate_df.py ${2} > ${base_path}/data/tmp/${1}_${2}.txt
+    echo 'running ${1} ${2}'
+    bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ${1} | \
+    python ${base_path}/scripts/generate_df.py ${2} > /
 }
 export -f generate
 export CENDR_RELEASE
 export base_path
 
-mkdir -p ${base_path}/data/tmp
 if [ ! -s df_outgroup/QX1211.tsv.gz ];
 then
-    for strain in QX1211 XZ1516; do
-        parallel --verbose generate {} ${strain} ::: I II III IV V X MtDNA
-        c_str="";
-            for chrom in I II III IV V X MtDNA; do
-                c_str="${c_str} ${base_path}/data/tmp/${chrom}_${strain}.txt"
-            done;
-            echo ${c_str}
-            cat ${c_str} | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
-            rm ${c_str};
-    done;
+parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA ::: QX1211 XZ1516 | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
+parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
 fi
 
 
@@ -166,4 +159,4 @@ fi
 # Finally, generate the spectra! #
 #================================#
 
-
+#${base_path}/scripts/

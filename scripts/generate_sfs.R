@@ -28,12 +28,22 @@ multi_dfe_out <- function(df, fname) {
   )
 }
 
-
+#=========#
+# Operons #
+#=========#
 spectra(df %>% dplyr::filter(operon__operon == T)) %>%
         multi_dfe_out(fname="data/spectra/{outgroup}/operon_T.sfs")
 spectra(df %>% dplyr::filter(operon__operon == T)) %>%
         multi_dfe_out(fname="data/spectra/{outgroup}/operon_F.sfs")
 
+
+#===========#
+# Chrom Arm #
+#===========#
+spectra(df %>% dplyr::filter(aoc__arm == T)) %>%
+  multi_dfe_out(fname="data/spectra/{outgroup}/operon_T.sfs")
+spectra(df %>% dplyr::filter(aoc__center == T)) %>%
+  multi_dfe_out(fname="data/spectra/{outgroup}/operon_F.sfs")
 
 
 
