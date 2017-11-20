@@ -1,0 +1,9 @@
+data_path_1 /Users/dancook/Documents/dfe-alpha-release-2.15/data
+sfs_input_file sfs.txt
+fold 0
+epochs 2
+site_class 0
+n2 545
+t2_variable 1
+t2 50
+est_dfe_results_dir results_dir_neut/
