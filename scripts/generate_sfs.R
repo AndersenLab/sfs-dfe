@@ -4,7 +4,7 @@ setwd(system("git rev-parse --show-toplevel", intern =T))
 library(tidyverse)
 library(glue)
 
-outgroup = "XZ1516"
+outgroup = "QX1211"
 
 df <- readr::read_tsv(glue::glue("data/df_outgroup/{outgroup}.tsv.gz"))
 
