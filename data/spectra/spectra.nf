@@ -30,7 +30,7 @@ process run_multi_dfe {
 	script:
 		if (selmode == 0 || selmode == 1) {
 			nspikes = "-nspikes 5"
-			ranrep = "-ranrep 10"
+			ranrep = "-ranrep 2"
 		} else {
 			nspikes = ""
 			ranrep = ""
