@@ -17,11 +17,12 @@ spectra <- function(df) {
 }
 
 multi_dfe_out <- function(df, fname) {
+  # An extra 0 is added to the end of each spectra for 
   writeLines(
     c(
       nrow(df),
-      paste(df$selected, collapse =" "),
-      paste(df$neutral, collapse =" ")
+      paste(c(df$selected, 0), collapse =" "),
+      paste(c(df$neutral, 0), collapse =" ")
     ),
     con = glue::glue(fname), 
     sep = "\n"
@@ -77,12 +78,33 @@ spectra(df %>% dplyr::filter(is__gene == T, dauer__gene == F)) %>%
 #=====================#
 
 # For these, I examine a single genome-wide, neutral spectrum
-
 neutral_spectrum <- df %>%
   dplyr::group_by(ancestral_allele_count, add=TRUE) %>%
   dplyr::summarize(neutral = sum(fold__4)) 
 
+#=========#
+# Biotype #
+#=========#
+
 sapply(names(df)[grepl("biotype", names(df))], function(x) {
+  x = rlang::sym(x)
+  df_out = df %>% dplyr::filter((!!x) == T) %>%
+    dplyr::group_by(ancestral_allele_count, add=TRUE) %>%
+    dplyr::summarize(selected = sum(fold__4 == F)) %>%
+    dplyr::full_join(neutral_spectrum) %>%
+    dplyr::arrange(ancestral_allele_count) %>%
+    dplyr::mutate(selected = ifelse(is.na(selected), 0, selected))
+  if(sum(df_out$selected) > 0) {
+    print(glue::glue("data/spectra/{outgroup}/{x}.sfs"))
+    df_out %>% multi_dfe_out(fname=glue::glue("data/spectra/{outgroup}/{x}.sfs"))
+  }
+})
+
+#========#
+# Effect #
+#========#
+
+sapply(names(df)[grepl("effect", names(df))], function(x) {
   x = rlang::sym(x)
   df_out = df %>% dplyr::filter((!!x) == T) %>%
     dplyr::group_by(ancestral_allele_count, add=TRUE) %>%

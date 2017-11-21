@@ -108,7 +108,8 @@ site_types = ['3_prime_UTR_variant',
               'synonymous_variant',
               'upstream_gene_variant',
               'pseudogene',
-              'splice_donor_variant']
+              'splice_donor_variant',
+              'splice_acceptor_variant']
 
 ANN_header = ["allele",
               "effect",
@@ -226,8 +227,9 @@ for line in vcf:
         # Add a column for every effect type.
         out.update(list(zip(["effect__" + x for x in site_types], len(site_types)*[False])))
         for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
-            out["effect__" + effect] = True
-
+            if effect in out.keys():
+                out["effect__" + effect] = True
+            
         #========#
         # impact #
         #========#
@@ -309,6 +311,7 @@ for line in vcf:
         for k, v in out.items():
             if '__' in k:
                 out[k] = TF[v]
+        #print('\t'.join(out.keys()))
         print('\t'.join(map(str, out.values())))
 
 
