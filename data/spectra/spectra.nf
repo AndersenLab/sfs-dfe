@@ -20,7 +20,7 @@ process run_multi_dfe {
 	tag { "${outgroup} - ${sfs} - ${conpop} - ${selmode}" }
 
 	input:
-		set file(sfs), val(outgroup), val(conpop), val(selmode), file('directory_config.dat') from spectra.toSortedList()
+		set file(sfs), val(outgroup), val(conpop), val(selmode), file('directory_config.dat') from spectra
 
 	output:
 		//set file("${sfs}.expSFS.out"), val(outgroup), val(conpop), val(selmode) into spectra
