@@ -8,8 +8,8 @@ spectra_QX1211 = Channel.fromPath("QX1211/*.sfs").combine(['QX1211'])
 spectra_QX1211.into { spectra_in }
 
 // model pop size
-spectra_in.combine([0, 1]) // conpop
-	   	  .combine([0]) // selmode
+spectra_in.combine([0, 1, 2, 3, 4, 5]) // conpop
+	   	  .combine([0, 1]) // selmode
 	   	  .combine([file('directory_config.dat')])
 	   	  .into { spectra }
 
@@ -30,7 +30,7 @@ process run_multi_dfe {
 	script:
 		if (selmode == 0 || selmode == 1) {
 			nspikes = "-nspikes 5"
-			ranrep = "-ranrep 10"
+			ranrep = "-ranrep 2"
 		} else {
 			nspikes = ""
 			ranrep = ""
@@ -82,6 +82,8 @@ process parse_maxl_proc {
 process merge_maxl_out {
 
 	publishDir 'results/', mode: 'copy'
+
+    executor 'local'
 
 	input:
 		file("maxml_out*.tsv") from maxml_out.toSortedList()

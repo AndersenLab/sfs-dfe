@@ -140,18 +140,20 @@ fi
 #==========================#
 
 function generate() {
-    echo 'running ${1} ${2}'
     bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ${1} | \
-    python ${base_path}/scripts/generate_df.py ${2} > /
+    python ${base_path}/scripts/generate_df.py ${2} > ${base_path}/data/tmp/${2}_${1}.tsv
 }
+
 export -f generate
 export CENDR_RELEASE
 export base_path
 
 if [ ! -s df_outgroup/QX1211.tsv.gz ];
 then
-parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA ::: QX1211 XZ1516 | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
-parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
+    parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA ::: QX1211
+    cat ${base_path}/data/tmp/QX1211_I.tsv ${base_path}/data/tmp/QX1211_II.tsv ${base_path}/data/tmp/QX1211_III.tsv ${base_path}/data/tmp/QX1211_IV.tsv ${base_path}/data/tmp/QX1211_V.tsv ${base_path}/data/tmp/QX1211_X.tsv ${base_path}/data/tmp/QX1211_MtDNA.tsv | pigz > ${base_path}/data/df_outgroup/QX1211.tsv.gz
+    parallel -P 0 --verbose generate {} ::: I II III IV V X MtDNA ::: XZ1516 | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
+    cat ${base_path}/data/tmp/XZ1516_I.tsv ${base_path}/data/tmp/XZ1516_II.tsv ${base_path}/data/tmp/XZ1516_III.tsv ${base_path}/data/tmp/XZ1516_IV.tsv ${base_path}/data/tmp/XZ1516_V.tsv ${base_path}/data/tmp/XZ1516_X.tsv ${base_path}/data/tmp/XZ1516_MtDNA.tsv | pigz > ${base_path}/data/df_outgroup/XZ1516.tsv.gz
 fi
 
 

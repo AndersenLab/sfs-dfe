@@ -88,6 +88,7 @@ def arm_or_center(chrom, pos):
         c = 'arm'
     return c
 
+
 f = []
 
 site_types = ['3_prime_UTR_variant',
@@ -106,7 +107,9 @@ site_types = ['3_prime_UTR_variant',
               'stop_retained_variant',
               'synonymous_variant',
               'upstream_gene_variant',
-              'pseudogene']
+              'pseudogene',
+              'splice_donor_variant',
+              'splice_acceptor_variant']
 
 ANN_header = ["allele",
               "effect",
@@ -167,6 +170,7 @@ for line in vcf:
     line_str = str(line)
     if not line_str.startswith("#") and line_str.count("./.") == 0:
         # Get Allele Counts
+        N_GT = sum(line.gt_types == 0) + sum(line.gt_types == 3)
         ancestral_allele_count = sum(line.gt_types[outgroup_index] == line.gt_types) - 1 # Subtract one for outgroup
         if sum(line.gt_types == 0) <= sum(line.gt_types == 3):
             minor_allele_count = sum(line.gt_types == 0)
@@ -179,7 +183,7 @@ for line in vcf:
                 ('allele_frequency', line.aaf),
                 ('ancestral_allele_count', ancestral_allele_count),
                 ('minor_allele_count', minor_allele_count),
-                ('N_GT', sample_len),
+                ('N_GT', N_GT),
                 ('outgroup', outgroup)
               ])
 
@@ -207,10 +211,10 @@ for line in vcf:
             site_type = str(degeneracy)
             out['fold__' + site_type] = True
 
+
         #=====#
         # ANN #
         #=====# 
-
         ANN = line.INFO.get("ANN")
         if ANN:
             ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in ANN.split(",")]
@@ -223,8 +227,9 @@ for line in vcf:
         # Add a column for every effect type.
         out.update(list(zip(["effect__" + x for x in site_types], len(site_types)*[False])))
         for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
-            out["effect__" + effect] = True
-
+            if effect in list(out.keys()):
+                out["effect__" + effect] = True
+            
         #========#
         # impact #
         #========#
@@ -232,16 +237,18 @@ for line in vcf:
         out.update(list(zip(["impact__" + x for x in impact_set], len(impact_set)*[False])))
         # impact
         out["is__gene"] = False
+        if 'transcript' in str(line):
+            out['is__gene'] = True
         for impact in {x['impact'] for x in ANN_SET}:
             out["impact__" + impact] = True
-            out["is__gene"] = True
 
         #=========#
         # biotype #
         #=========#
         out.update(list(zip(["biotype__" + x for x in biotypes], len(biotypes)*[False])))
         for biotype in {x['transcript_biotype'] for x in ANN_SET}:
-            out["biotype__" + impact] = True
+            if biotype in list(out.keys()):
+                out["biotype__" + biotype] = True
 
 
         #=======#
@@ -304,6 +311,7 @@ for line in vcf:
         for k, v in out.items():
             if '__' in k:
                 out[k] = TF[v]
+        #print('\t'.join(out.keys()))
         print('\t'.join(map(str, out.values())))
 
 
