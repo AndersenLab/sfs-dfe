@@ -20,7 +20,7 @@ process run_multi_dfe {
 	tag { "${outgroup} - ${sfs} - ${conpop} - ${selmode}" }
 
 	input:
-		set file(sfs), val(outgroup), val(conpop), val(selmode), file('directory_config.dat') from spectra
+		set file(sfs), val(outgroup), val(conpop), val(selmode), file('directory_config.dat') from spectra.toSortedList()
 
 	output:
 		//set file("${sfs}.expSFS.out"), val(outgroup), val(conpop), val(selmode) into spectra
@@ -91,7 +91,8 @@ process merge_maxl_out {
 
 	"""
 	#!/usr/bin/env Rscript --vanilla
-	library(tidyverse)
+	library(dplyr)
+    library(readr)
 
 	readr::write_tsv(
 		dplyr::bind_rows(

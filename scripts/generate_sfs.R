@@ -4,7 +4,7 @@ setwd(system("git rev-parse --show-toplevel", intern =T))
 library(tidyverse)
 library(glue)
 
-outgroup = "QX1211"
+outgroup = "XZ1516"
 
 df <- readr::read_tsv(glue::glue("data/df_outgroup/{outgroup}.tsv.gz"))
 
@@ -33,7 +33,7 @@ multi_dfe_out <- function(df, fname) {
 #============#
 sapply(c("I", "II", "III", "IV", "V", "X"), function(x) {
   outfile=glue::glue("data/spectra/{outgroup}/chromosome_{x}.sfs")
-  df %>% dplyr::filter(chrom == x) %>%
+  spectra(df %>% dplyr::filter(chrom == x)) %>%
     multi_dfe_out(fname=outfile)
 })
 
@@ -83,6 +83,15 @@ neutral_spectrum <- df %>%
   dplyr::summarize(neutral = sum(fold__4)) 
 
 sapply(names(df)[grepl("biotype", names(df))], function(x) {
-  x == rlang::sym(x)
-  df %>% dplyr::filter((!!x) == T)
-}
+  x = rlang::sym(x)
+  df_out = df %>% dplyr::filter((!!x) == T) %>%
+    dplyr::group_by(ancestral_allele_count, add=TRUE) %>%
+    dplyr::summarize(selected = sum(fold__4 == F)) %>%
+    dplyr::full_join(neutral_spectrum) %>%
+    dplyr::arrange(ancestral_allele_count) %>%
+    dplyr::mutate(selected = ifelse(is.na(selected), 0, selected))
+  if(sum(df_out$selected) > 0) {
+    print(glue::glue("data/spectra/{outgroup}/{x}.sfs"))
+    df_out %>% multi_dfe_out(fname=glue::glue("data/spectra/{outgroup}/{x}.sfs"))
+  }
+})
