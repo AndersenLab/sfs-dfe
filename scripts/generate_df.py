@@ -227,7 +227,7 @@ for line in vcf:
         # Add a column for every effect type.
         out.update(list(zip(["effect__" + x for x in site_types], len(site_types)*[False])))
         for effect in set(sum([x['effect'].split("&") for x in ANN_SET], [])):
-            if effect in out.keys():
+            if effect in list(out.keys()):
                 out["effect__" + effect] = True
             
         #========#
@@ -247,7 +247,7 @@ for line in vcf:
         #=========#
         out.update(list(zip(["biotype__" + x for x in biotypes], len(biotypes)*[False])))
         for biotype in {x['transcript_biotype'] for x in ANN_SET}:
-            if biotype:
+            if biotype in list(out.keys()):
                 out["biotype__" + biotype] = True
 
 
