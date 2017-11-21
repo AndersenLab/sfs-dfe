@@ -8,8 +8,8 @@ spectra_QX1211 = Channel.fromPath("QX1211/*.sfs").combine(['QX1211'])
 spectra_QX1211.into { spectra_in }
 
 // model pop size
-spectra_in.combine([0, 1]) // conpop
-	   	  .combine([0]) // selmode
+spectra_in.combine([0, 1, 2, 3, 4, 5]) // conpop
+	   	  .combine([0, 1]) // selmode
 	   	  .combine([file('directory_config.dat')])
 	   	  .into { spectra }
 
