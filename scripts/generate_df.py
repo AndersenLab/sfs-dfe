@@ -88,6 +88,7 @@ def arm_or_center(chrom, pos):
         c = 'arm'
     return c
 
+
 f = []
 
 site_types = ['3_prime_UTR_variant',
@@ -106,7 +107,8 @@ site_types = ['3_prime_UTR_variant',
               'stop_retained_variant',
               'synonymous_variant',
               'upstream_gene_variant',
-              'pseudogene']
+              'pseudogene',
+              'splice_donor_variant']
 
 ANN_header = ["allele",
               "effect",
@@ -232,16 +234,18 @@ for line in vcf:
         out.update(list(zip(["impact__" + x for x in impact_set], len(impact_set)*[False])))
         # impact
         out["is__gene"] = False
+        if 'transcript' in str(line):
+            out['is__gene'] = True
         for impact in {x['impact'] for x in ANN_SET}:
             out["impact__" + impact] = True
-            out["is__gene"] = True
 
         #=========#
         # biotype #
         #=========#
         out.update(list(zip(["biotype__" + x for x in biotypes], len(biotypes)*[False])))
         for biotype in {x['transcript_biotype'] for x in ANN_SET}:
-            out["biotype__" + impact] = True
+            if biotype:
+                out["biotype__" + biotype] = True
 
 
         #=======#
@@ -304,6 +308,7 @@ for line in vcf:
         for k, v in out.items():
             if '__' in k:
                 out[k] = TF[v]
+        print('\t'.join(out.keys()))
         print('\t'.join(map(str, out.values())))
 
 

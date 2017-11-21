@@ -143,6 +143,7 @@ function generate() {
     bcftools view ${base_path}/data/vcf/WI.${CENDR_RELEASE}.impute.snpeff.vcf.gz ${1} | \
     python ${base_path}/scripts/generate_df.py ${2} > ${base_path}/data/tmp/${2}_${1}.tsv
 }
+
 export -f generate
 export CENDR_RELEASE
 export base_path
