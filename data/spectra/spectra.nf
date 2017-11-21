@@ -83,6 +83,8 @@ process merge_maxl_out {
 
 	publishDir 'results/', mode: 'copy'
 
+    executor 'local'
+
 	input:
 		file("maxml_out*.tsv") from maxml_out.toSortedList()
 
@@ -91,8 +93,7 @@ process merge_maxl_out {
 
 	"""
 	#!/usr/bin/env Rscript --vanilla
-	library(dplyr)
-    library(readr)
+	library(tidyverse)
 
 	readr::write_tsv(
 		dplyr::bind_rows(
