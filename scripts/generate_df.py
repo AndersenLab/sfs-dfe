@@ -169,6 +169,7 @@ for line in vcf:
     line_str = str(line)
     if not line_str.startswith("#") and line_str.count("./.") == 0:
         # Get Allele Counts
+        N_GT = sum(line.gt_types == 0) + sum(line.gt_types == 3)
         ancestral_allele_count = sum(line.gt_types[outgroup_index] == line.gt_types) - 1 # Subtract one for outgroup
         if sum(line.gt_types == 0) <= sum(line.gt_types == 3):
             minor_allele_count = sum(line.gt_types == 0)
@@ -181,7 +182,7 @@ for line in vcf:
                 ('allele_frequency', line.aaf),
                 ('ancestral_allele_count', ancestral_allele_count),
                 ('minor_allele_count', minor_allele_count),
-                ('N_GT', sample_len),
+                ('N_GT', N_GT),
                 ('outgroup', outgroup)
               ])
 
@@ -209,10 +210,10 @@ for line in vcf:
             site_type = str(degeneracy)
             out['fold__' + site_type] = True
 
+
         #=====#
         # ANN #
         #=====# 
-
         ANN = line.INFO.get("ANN")
         if ANN:
             ANN_SET = [dict(zip(ANN_header, x.split("|"))) for x in ANN.split(",")]
@@ -308,7 +309,6 @@ for line in vcf:
         for k, v in out.items():
             if '__' in k:
                 out[k] = TF[v]
-        print('\t'.join(out.keys()))
         print('\t'.join(map(str, out.values())))
 
 
