@@ -1,55 +1,32 @@
-#!/usr/env/Rscript
+try(setwd(dirname(dirname(dirname(rstudioapi::getActiveDocumentContext()$path)))))
+library(tidyverse)
 
-try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
-setwd(system("git rev-parse --show-toplevel", intern=T))
+expr <- readr::read_tsv("expression/expression.txt.gz", skip = 5) %>%
+  dplyr::select(
+    "gene" = `### Gene`,
+    "expr_count" = `WBls:0000002 count`,
+    "expr_median" = `WBls:0000002 median`,
+    "expr_mean" = `WBls:0000002 mean`
+  ) %>%
+  dplyr::filter(expr_mean > 1e-10) %>%
+  dplyr::mutate(p_rank = dplyr::percent_rank(expr_mean))
 
+expr %>%
+  dplyr::filter(p_rank <= 0.25) %>% 
+  dplyr::select(gene) %>%
+  readr::write_tsv("expression/q1.expression.tsv", col_names=FALSE)
 
-# Life stages
-stages = list(
-               "WBls:0000002" = "all_stages",
-               "WBls:0000003" = 'embryo',
-               "WBls:0000032" = 'dauer',
-               "WBls:0000024" = 'L1',
-               "WBls:0000027" = 'L2',
-               "WBls:0000035" = 'L3',
-               "WBls:0000038" = 'L4',
-               "WBls:0000041" = "adult"
-              )
+expr %>%
+  dplyr::filter(p_rank > 0.25 & p_rank <= 0.5) %>% 
+  dplyr::select(gene) %>%
+  readr::write_tsv("expression/q2.expression.tsv", col_names=FALSE)
 
-rna_seq = readr::read_tsv("data/expression/RNASeq_FPKM.txt.gz", skip = 5) %>%
-          dplyr::rename(`gene` = `### Gene`)
+expr %>%
+  dplyr::filter(p_rank > 0.50 & p_rank <= 0.75) %>% 
+  dplyr::select(gene) %>%
+  readr::write_tsv("expression/q3.expression.tsv", col_names=FALSE)
 
-# Fix names
-purrr::map2(names(stages),
-             stages, 
-             function(.x, .y) {
-              name_set <- names(rna_seq)[grepl(.x, names(rna_seq))]
-              names(rna_seq)[grepl(.x, names(rna_seq))] <<- gsub(.x, .y, name_set)
-             }
-)
-
-mean_values <- rna_seq %>% 
-               dplyr::select(gene, dplyr::contains('mean')) %>%
-               tidyr::gather('stage', 'expression', -gene) %>%
-               dplyr::filter(!(stage %in% c("Total stages mean", "dauer mean", "all_stages mean"))) %>%
-               dplyr::group_by(gene) %>%
-               dplyr::mutate(log_10_expr = log10(expression)) %>% 
-               dplyr::filter(log_10_expr > -10) %>%
-               dplyr::mutate(z = scale(expression),
-                             n = n()) %>%
-               dplyr::filter(n == 6) %>%
-               dplyr::mutate(mean_values, diff = sum(abs(log_10_expr - dplyr::lag(log_10_expr))))
-               dplyr::ungroup() %>%
-               dplyr::group_by(gene) %>%
-               dplyr::filter(n() == 6) %>%
-               dplyr::mutate(sd_z = sd(z)) %>%
-               dplyr::filter(sd_z < 0.005)
-               
-
-ggplot(mean_values %>% dplyr::mutate(l = dplyr::lag(z)) %>% dplyr::summarize(sum_diff = sum(l, na.rm = T))) +
-  geom_histogram(aes(x =sum_diff))
-ggplot(mean_values) +
-  geom_histogram(aes(x = z))
-ggplot(mean_values) +
-  geom_histogram(aes(x = (sd_z)))+
-  xlim(-0.5,0.5)
+expr %>%
+  dplyr::filter(p_rank > 0.75) %>% 
+  dplyr::select(gene) %>%
+  readr::write_tsv("expression/q4.expression.tsv", col_names=FALSE)
