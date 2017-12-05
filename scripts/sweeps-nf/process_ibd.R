@@ -344,18 +344,24 @@ ggsave("haplotype_length.png", height = 10, width = 10)
 # Normal haplotype plot #
 #=======================#
 
+mcolor_grp <- plot_df %>% dplyr::select(haplotype, color) %>% dplyr::distinct()
+mcolor <- mcolor_grp$color
+names(mcolor) <- mcolor_grp$haplotype
+
+
 ggplot(plot_df,
        aes(xmin = start/1E6, xmax = stop/1E6, 
            ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
-           fill = color)) +
-geom_rect() +
-scale_y_continuous(breaks = 1:length(strain),
-                   labels = strain_labels,
-                   expand = c(0, 0)) + 
-xlab("Position (Mb)") + 
-theme_bw() +
-facet_grid(.~chromosome, scales="free", space="free") +
-theme(legend.position="none")
+           fill = haplotype)) +
+  geom_rect() +
+  scale_fill_manual(values = mcolor) +
+  scale_y_continuous(breaks = 1:length(strain),
+                     labels = strain_labels,
+                     expand = c(0, 0)) + 
+  xlab("Position (Mb)") + 
+  theme_bw() +
+  facet_grid(.~chromosome, scales="free", space="free") +
+  theme(legend.position="none")
 
 ggsave("haplotype.png", height = 10, width = 10) 
 
