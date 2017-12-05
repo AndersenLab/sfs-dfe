@@ -20,7 +20,11 @@ ibd_set = vcf_in.combine(minalleles).combine(r2window).combine(ibdtrim).combine(
 
 process ibdseq {
 
-    tag { "${minalleles} ${r2window}" }
+    publishDir "results/", mode: 'copy'
+
+    errorStrategy 'ignore'
+
+    tag { "${minalleles} ${r2window} ${r2max} ${ibdtrim}" }
 
     echo true
 
@@ -28,7 +32,11 @@ process ibdseq {
         set file(vcf), val(minalleles), val(r2window), val(ibdtrim), val(r2max) from ibd_set
 
     output:
-        set file("haplotype_tsv.ibd")
+        file("${minalleles}_${r2window}_${r2max}_${ibdtrim}.ibd.tsv")
+        file("${minalleles}_${r2window}_${r2max}_${ibdtrim}.haplen.png")
+        file("${minalleles}_${r2window}_${r2max}_${ibdtrim}.gw_sort.png")
+        file("${minalleles}_${r2window}_${r2max}_${ibdtrim}.gw.png")
+        file("${minalleles}_${r2window}_${r2max}_${ibdtrim}.haplotype.png")
 
     """
     echo \$(bcftools query --list-samples ${vcf} | wc -l | awk '{ print \$0*${minalleles} }' | awk '{printf("%d\\n", \$0+=\$0<0?0:0.9)}')
@@ -49,6 +57,11 @@ process ibdseq {
         done;
     cat *.ibd | awk '{ print \$0 "\t${minalleles}\t${ibdtrim}\t${r2window}\t${r2max}" }' > haplotype.tsv
     Rscript ${process_ibd}
+    mv haplotype.tsv ${minalleles}_${r2window}_${r2max}_${ibdtrim}.ibd.tsv
+    mv max_haplotype_genome_wide.png ${minalleles}_${r2window}_${r2max}_${ibdtrim}.gw.png
+    mv max_haplotype_sorted_genome_wide.png ${minalleles}_${r2window}_${r2max}_${ibdtrim}.gw_sort.png
+    mv haplotype_length.png ${minalleles}_${r2window}_${r2max}_${ibdtrim}.haplen.png
+    mv haplotype.png ${minalleles}_${r2window}_${r2max}_${ibdtrim}.haplotype.png
     """
 }
 

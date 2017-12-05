@@ -272,20 +272,19 @@ plot_df <- plot_df %>%
 
 strain_labels <- (plot_df %>% dplyr::select(plotpoint, isotype) %>% dplyr::distinct() %>% dplyr::arrange(plotpoint))$isotype
 
-plot_df %>% 
-  ggplot(.,
-         aes(xmin = start/1E6, xmax = stop/1E6, 
-             ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
-             fill = max_haplotype)) +
-  geom_rect() +
-  scale_fill_manual(values = c("Gray", "Red")) + 
-  scale_y_continuous(breaks = 1:length(strain),
-                     labels = strain_labels,
-                     expand = c(0, 0)) + 
-  xlab("Position (Mb)") + 
-  theme_bw() +
-  facet_grid(.~chromosome, scales="free", space="free") +
-  theme(legend.position="none")
+ggplot(plot_df,
+       aes(xmin = start/1E6, xmax = stop/1E6, 
+           ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
+           fill = max_haplotype)) +
+geom_rect() +
+scale_fill_manual(values = c("Gray", "Red")) + 
+scale_y_continuous(breaks = 1:length(strain_labels),
+                   labels = strain_labels,
+                   expand = c(0, 0)) + 
+xlab("Position (Mb)") + 
+theme_bw() +
+facet_grid(.~chromosome, scales="free", space="free") +
+theme(legend.position="none")
 
 ggsave(paste("max_haplotype_genome_wide.png"),
        width = 32,
@@ -305,7 +304,7 @@ ranked_by_sharing <- plot_df %>%
 strain_labels <- (plot_df %>% dplyr::select(plotpoint, isotype) %>% dplyr::distinct() %>% dplyr::arrange(plotpoint))$isotype
 
 plot_df %>% 
-  dplyr::filter(chromosome == x) %>%
+  dplyr::filter(chromosome == x, max_haplotype==TRUE) %>%
   dplyr::select(-plotpoint) %>%
   dplyr::left_join(ranked_by_sharing) %>%
   ggplot(.,
@@ -313,7 +312,7 @@ plot_df %>%
              ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
              fill = max_haplotype)) +
   geom_rect() +
-  scale_fill_manual(values = c("Gray", "Red")) + 
+  scale_fill_manual(values = c("Red", "Gray")) + 
   scale_y_continuous(breaks = 1:length(strain),
                      labels = strain_labels,
                      expand = c(0, 0)) + 
@@ -325,36 +324,39 @@ plot_df %>%
 
 cowplot::plot_grid(plotlist=chrom_plots, ncol=6)
 
+ggsave("max_haplotype_sorted_genome_wide.png",
+       width = 32,
+       height = 28)
+
 #===================================#
 # Distribution of sharing by strain #
 #===================================#
 
-plot_df %>% 
-  dplyr::group_by(chromosome, haplotype, isotype) %>%
-  dplyr::mutate(hap_sum = sum(hap_length)) %>% 
-  dplyr::mutate(hap_cut = cut(hap_sum, c(1, 10, 100, 1000)))
+ggplot(plot_df) +
+  geom_histogram(aes(x = hap_length)) +
+  scale_x_log10(labels = scales::comma, limits = c(1, 1E6)) +
+  labs(x = "Haplotype Length", y = "Count")
+
+ggsave("haplotype_length.png", height = 10, width = 10) 
 
 
+#=======================#
+# Normal haplotype plot #
+#=======================#
 
-
-#===========#
-# Heuristic #
-#===========#
-
-ggplot(plot_df %>% dplyr::filter(chromosome == "I", stop - start < 5000),
+ggplot(plot_df,
        aes(xmin = start/1E6, xmax = stop/1E6, 
            ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
            fill = color)) +
-  geom_rect() +
-  scale_y_continuous(breaks = 1:length(strain),
-                     labels = strain_labels) + 
-  xlab("Position (Mb)") + 
-  theme_bw()
+geom_rect() +
+scale_y_continuous(breaks = 1:length(strain),
+                   labels = strain_labels,
+                   expand = c(0, 0)) + 
+xlab("Position (Mb)") + 
+theme_bw() +
+facet_grid(.~chromosome, scales="free", space="free") +
+theme(legend.position="none")
 
-ggsave(paste("I.png"),
-       width = 16,
-       height = 28)
+ggsave("haplotype.png", height = 10, width = 10) 
 
-lapply(unique(processed_haps[[2]]), function(x) {
-  ggplot(procssed_haps)
-})
+
