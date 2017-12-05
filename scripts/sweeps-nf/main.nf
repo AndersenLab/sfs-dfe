@@ -20,6 +20,8 @@ ibd_set = vcf_in.combine(minalleles).combine(r2window).combine(ibdtrim).combine(
 
 process ibdseq {
 
+    echo true
+
     publishDir "results/", mode: 'copy'
 
     errorStrategy 'ignore'
