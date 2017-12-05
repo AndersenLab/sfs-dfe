@@ -1,11 +1,11 @@
 
-
+params.vcf=""
 ibdseq=file("ibdseq.r1206.jar")
 process_ibd=file("process_ibd.R")
-vcf_in=Channel.fromPath("test2.vcf.gz")
+vcf_in=Channel.fromPath(params.vcf)
 
 // Species the minimum number of samples carrying the minor allele. 
-minalleles=Channel.from([0.00, 0.05])
+minalleles=Channel.from([0, 0.05])
 
 // Specifies the number of markers in the sliding window used to detect correlated markers.
 r2window = Channel.from([75, 150, 500, 1000])
