@@ -326,10 +326,9 @@ plot_df_filtered <- plot_df %>%
   dplyr::group_by(chromosome, isotype) %>%
   dplyr::mutate(is_swept = (sum(swept) > 0)) 
 
-plot_df_filtered %>%
+sweep_summary <- plot_df_filtered %>%
   dplyr::select(chromosome, isotype, max_haplotype_shared, max_haplotype, is_swept) %>%
-  dplyr::filter(!(is_swept == TRUE & max_haplotype == FALSE)) %>%
-  dplyr::filter(max_haplotype == TRUE & is_swept == FALSE) %>%
+  dplyr::filter(is_swept & max_haplotype) %>%
   dplyr::full_join(
     tbl_df(expand.grid(isotype=strain, chromosome=c("I", "II", "III", "IV", "V", "X"), stringsAsFactors=F)),
     by = c("isotype", "chromosome")
@@ -337,12 +336,28 @@ plot_df_filtered %>%
   dplyr::ungroup() %>%
   dplyr::distinct() %>%
   dplyr::mutate(is_swept = ifelse(is.na(is_swept), F, is_swept)) %>%
-  dplyr::arrange(chromosome, isotype) %>%
+  dplyr::arrange(chromosome, isotype) 
+
+suffix <- function(x) {
+  paste0(x,"_hapshare") 
+}
+
+hap_share <- sweep_summary %>% 
+    dplyr::select(-max_haplotype, -is_swept) %>%
+    tidyr::spread(chromosome, max_haplotype_shared) %>%
+    dplyr::rename_at(.vars=vars(-isotype), funs(suffix))
+
+sweep_summary %>%
+  dplyr::select(-max_haplotype, -max_haplotype_shared) %>%
+  tidyr::spread(chromosome, is_swept) %>%
+  dplyr::left_join(hap_share) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(swept_chroms = sum(I, IV, V, X)) %>% 
   readr::write_tsv("sweep_summary.tsv")
 
 chrom_plots <-  lapply(c("I", "II", "III", "IV", "V", "X"), function(x) {
-ranked_by_sharing <- plot_df_filtered %>% 
-  dplyr::filter(chromosome == x, is_swept) %>%
+ranked_by_sharing <- plot_df %>% 
+  dplyr::filter(chromosome == x) %>%
   dplyr::group_by(isotype) %>%
   dplyr::filter(max_haplotype_shared == max(max_haplotype_shared)) %>%
   dplyr::select(haplotype, isotype, max_haplotype_shared) %>%
@@ -352,7 +367,7 @@ ranked_by_sharing <- plot_df_filtered %>%
 
 strain_labels <- (plot_df %>% dplyr::select(plotpoint, isotype) %>% dplyr::distinct() %>% dplyr::arrange(plotpoint))$isotype
 
-plot_df %>% 
+plot_df_filtered %>% 
   dplyr::filter(chromosome == x, max_haplotype==TRUE) %>%
   dplyr::select(-plotpoint) %>%
   dplyr::left_join(ranked_by_sharing) %>%
