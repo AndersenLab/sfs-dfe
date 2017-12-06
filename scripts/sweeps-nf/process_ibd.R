@@ -291,9 +291,58 @@ ggsave(paste("max_haplotype_genome_wide.png"),
        height = 28)
 
 # Plot swept by chromosome & sorted by isotype
+
+is_overlapping <- function(start_1, end_1, start_2, end_2) {
+    if (
+        (dplyr::between(start_1, start_2, end_2)) |
+        (dplyr::between(start_2, start_1, end_1)) |
+        (dplyr::between(end_1, start_2, end_2)) |
+        (dplyr::between(end_2, start_1, end_1))
+      ) {
+      return(TRUE)
+    } 
+  FALSE
+}
+
+# Filter chromosomes appropriately
+plot_df_filtered <- plot_df %>% 
+  # Filter out strains with less than 2% sharing with the max haplotype
+  dplyr::rowwise() %>%
+  dplyr::mutate(swept=
+                  (
+                  (
+                      (chromosome == "I" & is_overlapping(5E6, 10E6, start, stop)) |
+                      (chromosome == "IV" & is_overlapping(5E6, 14E6, start, stop)) |
+                      (chromosome == "V" & is_overlapping(5E6, 15E6, start, stop)) |
+                      (chromosome == "X" & is_overlapping(0, 7E6, start, stop))
+                  ) 
+                    &
+                  (max_haplotype)
+                  &
+                  (max_haplotype_shared > 0.03)
+                  )
+                ) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(chromosome, isotype) %>%
+  dplyr::mutate(is_swept = (sum(swept) > 0)) 
+
+plot_df_filtered %>%
+  dplyr::select(chromosome, isotype, max_haplotype_shared, max_haplotype, is_swept) %>%
+  dplyr::filter(!(is_swept == TRUE & max_haplotype == FALSE)) %>%
+  dplyr::filter(max_haplotype == TRUE & is_swept == FALSE) %>%
+  dplyr::full_join(
+    tbl_df(expand.grid(isotype=strain, chromosome=c("I", "II", "III", "IV", "V", "X"), stringsAsFactors=F)),
+    by = c("isotype", "chromosome")
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct() %>%
+  dplyr::mutate(is_swept = ifelse(is.na(is_swept), F, is_swept)) %>%
+  dplyr::arrange(chromosome, isotype) %>%
+  readr::write_tsv("sweep_summary.tsv")
+
 chrom_plots <-  lapply(c("I", "II", "III", "IV", "V", "X"), function(x) {
-ranked_by_sharing <- plot_df %>% 
-  dplyr::filter(chromosome == x) %>%
+ranked_by_sharing <- plot_df_filtered %>% 
+  dplyr::filter(chromosome == x, is_swept) %>%
   dplyr::group_by(isotype) %>%
   dplyr::filter(max_haplotype_shared == max(max_haplotype_shared)) %>%
   dplyr::select(haplotype, isotype, max_haplotype_shared) %>%
