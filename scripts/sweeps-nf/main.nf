@@ -12,7 +12,7 @@ r2window = Channel.from([150, 750, 1500])
 
 ibdtrim = Channel.from([0, 5, 10])
 
-r2max = Channel.from([0.15, 0.5, 0.8])
+r2max = Channel.from([0.8, 0.5, 0.15])
 
 
 ibd_set = vcf_in.combine(minalleles).combine(r2window).combine(ibdtrim).combine(r2max)
