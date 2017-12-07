@@ -316,10 +316,12 @@ plot_df %>%
 # Filter chromosomes appropriately
 plot_df_filtered <- plot_df %>%
   dplyr::arrange(chromosome, start, stop) %>%
-  # Filter out strains with less than 2% sharing with the max haplotype
+  # Filter out strains with tiny haplotypes 
   dplyr::rowwise() %>%
   dplyr::mutate(swept=
                   (
+                  (hap_length > 1E4)
+                  &
                   (
                       (chromosome == "I" & is_overlapping(5E6, 10E6, start, stop)) |
                       (chromosome == "II" & is_overlapping(5E6, 10E6, start, stop)) |
@@ -372,23 +374,24 @@ ranked_by_sharing <- plot_df %>%
   dplyr::filter(chromosome == x) %>%
   dplyr::group_by(isotype) %>%
   dplyr::filter(max_haplotype_shared == max(max_haplotype_shared)) %>%
-  dplyr::select(haplotype, isotype, max_haplotype_shared) %>%
+  dplyr::select(isotype, max_haplotype_shared) %>%
   dplyr::distinct() %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(plotpoint=rank(desc(max_haplotype_shared), ties.method="first"))
+  dplyr::mutate(plotpoint=rank(desc(max_haplotype_shared), ties.method="first")) %>%
+  dplyr::select(-max_haplotype_shared)
 
 strain_labels <- (plot_df %>% dplyr::select(plotpoint, isotype) %>% dplyr::distinct() %>% dplyr::arrange(plotpoint))$isotype
 
 plot_df_filtered %>%
-  dplyr::filter(chromosome == x, is_swept==TRUE) %>%
+  dplyr::filter(chromosome == x) %>%
   dplyr::select(-plotpoint) %>%
   dplyr::left_join(ranked_by_sharing) %>%
   ggplot(.,
          aes(xmin = start/1E6, xmax = stop/1E6,
              ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
-             fill = max_haplotype)) +
+             fill = is_swept)) +
   geom_rect() +
-  scale_fill_manual(values = c("Red", "Gray")) +
+  scale_fill_manual(values = c("TRUE"="Red", "FALSE"="Gray")) +
   scale_y_continuous(breaks = 1:length(strain),
                      labels = strain_labels,
                      expand = c(0, 0)) +

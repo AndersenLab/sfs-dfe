@@ -5,14 +5,14 @@ process_ibd=file("process_ibd.R")
 vcf_in=Channel.fromPath(params.vcf)
 
 // Species the minimum number of samples carrying the minor allele. 
-minalleles=Channel.from([0.0, 0.05])
+minalleles=Channel.from([0.05])
 
 // Specifies the number of markers in the sliding window used to detect correlated markers.
 r2window = Channel.from([150, 750, 1500])
 
-ibdtrim = Channel.from([0, 5, 10])
+ibdtrim = Channel.from([0, 5])
 
-r2max = Channel.from([0.8, 0.5, 0.15])
+r2max = Channel.from([0.8, 0.85, 0.90])
 
 
 ibd_set = vcf_in.combine(minalleles).combine(r2window).combine(ibdtrim).combine(r2max)
