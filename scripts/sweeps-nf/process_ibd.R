@@ -219,7 +219,7 @@ plot_df <-
   dplyr::arrange(chromosome, isotype, start, stop) %>%
   # Condense data structure
   mutate(segment = data.table::rleid(haplotype)) %>%
-  dplyr::group_by(segment) %>%
+  dplyr::group_by(isotype, segment) %>%
   dplyr::mutate(start = min(start), stop = max(stop)) %>%
   dplyr::distinct() %>%
   dplyr::mutate(cvalue = as.integer(haplotype),
@@ -248,41 +248,6 @@ plot_df <-
   dplyr::group_by(chromosome, isotype) %>%
   dplyr::mutate(max_haplotype_shared = isotype_swept_haplotype_length / max_swept_haplotype_length)
 
-
-#========#
-#  Plot  #
-#========#
-
-#==============================#
-# Plot ~ Swept haplotypes only #
-#==============================#
-
-strain_labels <- plot_df %>% 
-                    dplyr::ungroup() %>% 
-                    dplyr::select(plotpoint, isotype) %>% 
-                    dplyr::distinct() %>% 
-                    dplyr::arrange(plotpoint)
-
-ggplot(plot_df,
-       aes(xmin = start/1E6, xmax = stop/1E6,
-           ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
-           fill = swept_haplotype)) +
-geom_rect() +
-scale_fill_manual(values = c("Gray", "Red")) +
-scale_y_continuous(breaks = strain_labels$plotpoint,
-                   labels = strain_labels$isotype,
-                   expand = c(0, 0)) +
-xlab("Position (Mb)") +
-theme_bw() +
-facet_grid(.~chromosome, scales="free", space="free") +
-theme(legend.position="none")
-
-ggsave(paste("max_haplotype_genome_wide.png"),
-       width = 32,
-       height = 28)
-
-# Plot swept by chromosome & sorted by isotype
-
 is_overlapping <- function(start_1, end_1, start_2, end_2) {
     if (
         (dplyr::between(start_1, start_2, end_2)) |
@@ -300,7 +265,7 @@ plot_df_filtered <- plot_df %>%
   dplyr::arrange(chromosome, start, stop) %>%
   # Filter out strains with tiny haplotypes
   dplyr::rowwise() %>%
-  dplyr::mutate(swept_haplotype=
+  dplyr::mutate(filtered_swept_haplotype=
                   (
                   (hap_length > 1E4)
                   &
@@ -314,11 +279,13 @@ plot_df_filtered <- plot_df %>%
                   )
                   &
                   (max_haplotype_shared > 0.03)
+                  &
+                  (swept_haplotype == TRUE)
                   )
                 ) %>%
   dplyr::ungroup() %>%
   dplyr::group_by(chromosome, isotype) %>%
-  dplyr::mutate(is_swept = (sum(swept_haplotype) > 0))
+  dplyr::mutate(is_swept = (sum(filtered_swept_haplotype) > 0))
 
 sweep_summary <- plot_df_filtered %>%
   dplyr::select(chromosome, isotype, max_haplotype_shared, is_swept) %>%
