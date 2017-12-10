@@ -287,6 +287,38 @@ plot_df_filtered <- plot_df %>%
   dplyr::group_by(chromosome, isotype) %>%
   dplyr::mutate(is_swept = (sum(filtered_swept_haplotype) > 0))
 
+#==============================#
+# Plot ~ Swept haplotypes only #
+#==============================#
+
+strain_labels <- plot_df %>% 
+                    dplyr::ungroup() %>% 
+                    dplyr::select(plotpoint, isotype) %>% 
+                    dplyr::distinct() %>% 
+                    dplyr::arrange(plotpoint)
+
+ggplot(plot_df,
+       aes(xmin = start/1E6, xmax = stop/1E6,
+           ymin = plotpoint - 0.5, ymax = plotpoint + 0.5,
+           fill = swept_haplotype)) +
+geom_rect() +
+scale_fill_manual(values = c("Gray", "Red")) +
+scale_y_continuous(breaks = strain_labels$plotpoint,
+                   labels = strain_labels$isotype,
+                   expand = c(0, 0)) +
+xlab("Position (Mb)") +
+theme_bw() +
+facet_grid(.~chromosome, scales="free", space="free") +
+theme(legend.position="none")
+
+ggsave(paste("max_haplotype_genome_wide.png"),
+       width = 32,
+       height = 28)
+
+#===============#
+# Sweep summary #
+#===============#
+
 sweep_summary <- plot_df_filtered %>%
   dplyr::select(chromosome, isotype, max_haplotype_shared, is_swept) %>%
   dplyr::ungroup() %>%
