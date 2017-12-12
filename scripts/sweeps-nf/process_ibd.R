@@ -213,7 +213,6 @@ color_plotpoint <- processed_haps[[5]] %>%
 
 plot_df <-
   processed_haps[[3]] %>%
-  dplyr::filter(chromosome == "I") %>%
   dplyr::rename(isotype=haplotype,
                 haplotype=value) %>%
   dplyr::group_by(chromosome, isotype) %>%
@@ -236,7 +235,7 @@ plot_df <-
   dplyr::group_by(chromosome) %>% 
   dplyr::mutate(swept_haplotype = max(chrom_haplotype_sum) == chrom_haplotype_sum) %>%
   dplyr::mutate(swept_haplotype_name = ifelse(swept_haplotype, haplotype, NA),
-                swept_haplotype_name = Filter(Negate(is.na), unique(swept_haplotype_name)),
+                swept_haplotype_name = base::Filter(Negate(is.na), unique(swept_haplotype_name)),
                 isotype_has_swept_haplotype = sum(swept_haplotype_name == haplotype) > 0,
                 isotypes_w_haplotype = length(unique(isotype))) %>%
   # Determine max length of swept haplotype and % shared
@@ -248,6 +247,7 @@ plot_df <-
   dplyr::mutate(max_swept_haplotype_length = max(isotype_swept_haplotype_length)) %>%
   dplyr::group_by(chromosome, isotype) %>%
   dplyr::mutate(max_haplotype_shared = isotype_swept_haplotype_length / max_swept_haplotype_length)
+
 
 
 #========#
@@ -306,19 +306,9 @@ is_overlapping <- function(start_1, end_1, start_2, end_2) {
 plot_df_filtered <- plot_df %>%
   dplyr::arrange(chromosome, start, stop) %>%
   # Filter out strains with tiny haplotypes
-  dplyr::rowwise() %>%
   dplyr::mutate(filtered_swept_haplotype=
                   (
                   (hap_length > 1E5)
-                  &
-                  (
-                      (chromosome == "I" & is_overlapping(5E6, 10E6, start, stop)) |
-                      (chromosome == "II" & is_overlapping(5E6, 10E6, start, stop)) |
-                      (chromosome == "III" & is_overlapping(5E6, 10E6, start, stop)) |
-                      (chromosome == "IV" & is_overlapping(5E6, 14E6, start, stop)) |
-                      (chromosome == "V" & is_overlapping(5E6, 15E6, start, stop)) |
-                      (chromosome == "X" & is_overlapping(0, 7E6, start, stop))
-                  )
                   &
                   (max_haplotype_shared > 0.03)
                   &
@@ -356,6 +346,7 @@ sweep_summary %>%
 
 chrom_plots <- lapply(c("I", "II", "III", "IV", "V", "X"), function(x) {
 ranked_by_sharing <- plot_df_filtered %>%
+    dplyr::ungroup() %>%
     dplyr::filter(chromosome == x) %>%
     dplyr::group_by(isotype) %>%
     dplyr::select(isotype, max_haplotype_shared) %>%
