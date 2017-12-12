@@ -207,6 +207,8 @@ processed_haps <- process_haps(haps,
                                number_strains = length(strain))
 save(processed_haps, file='processed_haps.Rda')
 
+
+
 color_plotpoint <- processed_haps[[5]] %>%
   dplyr::mutate(cvalue = row_number()) %>%
   dplyr::rename(color = value)
@@ -282,9 +284,9 @@ ggsave(paste("max_haplotype_genome_wide.png"),
        width = 32,
        height = 28)
 
-#==================#
-# Plot muted tones #
-#==================#
+#===============#
+# Sweep summary #
+#===============#
 
 
 
