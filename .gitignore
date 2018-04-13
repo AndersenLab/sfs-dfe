@@ -99,3 +99,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+.nextflow/
+work/
+tmp/
+cache/
+.nextflow.log*
+software/

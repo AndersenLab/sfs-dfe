@@ -16,6 +16,7 @@ try(setwd(dirname(rstudioapi::getActiveDocumentContext()$path)))
 setwd(system("git rev-parse --show-toplevel", intern=T))
 
 outgroup = commandArgs(trailingOnly=TRUE)
+outgroup = "QX1211"
 
 opts_knit$set(progress=TRUE)
 
@@ -62,7 +63,7 @@ data <- dplyr::bind_rows(
            )
 
 
-plot_spectra <- function(d, bin_size = 20) {
+plot_spectra <- function(d, bin_size = 20, unfolded_only=T) {
     
   d = d %>%
       dplyr::mutate(AF=floor(AF * bin_size)/bin_size) 
