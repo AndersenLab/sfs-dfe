@@ -29,6 +29,15 @@ multi_dfe_out <- function(df, fname) {
   )
 }
 
+#=============#
+# Genome-wide #
+#=============#
+
+outfile=glue::glue("data/spectra/{outgroup}/genome.sfs")
+spectra(df) %>%
+  multi_dfe_out(fname=outfile)
+
+
 #============#
 # Chromosome #
 #============#
