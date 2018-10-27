@@ -252,4 +252,24 @@ grep -P '\tCENTER\t' |\
 datamash -s -g 1,2,6,11 count 11 |\
 awk '{if($3 == $4) print $0, "ANCESTOR"; else print $0, "DERIVED"}' OFS="\t" > spectra_gatk/SFS_SELECTED_MODERATE_HIGH_CENTERS.tsv
 
+################################################################## HIGH - OFOLD - MODERATE
+# GENOME
+gunzip -c files/SFS_INPUT.tsv.gz |\
+grep '|HIGH|\|0FOLD\||MODERATE|' |\
+datamash -s -g 1,2,6,11 count 11 |\
+awk '{if($3 == $4) print $0, "ANCESTOR"; else print $0, "DERIVED"}' OFS="\t" > spectra_gatk/SFS_SELECTED_0FOLD_HIGH_MODERATE_GENOME.tsv
+
+# ARMS
+gunzip -c files/SFS_INPUT.tsv.gz |\
+grep '|HIGH|\|0FOLD\||MODERATE|' |\
+grep -P '\tARM\t' |\
+datamash -s -g 1,2,6,11 count 11 |\
+awk '{if($3 == $4) print $0, "ANCESTOR"; else print $0, "DERIVED"}' OFS="\t" > spectra_gatk/SFS_SELECTED_0FOLD_HIGH_MODERATE_ARMS.tsv
+
+# CENTERS
+gunzip -c files/SFS_INPUT.tsv.gz |\
+grep '|HIGH|\|0FOLD\||MODERATE|' |\
+grep -P '\tCENTER\t' |\
+datamash -s -g 1,2,6,11 count 11 |\
+awk '{if($3 == $4) print $0, "ANCESTOR"; else print $0, "DERIVED"}' OFS="\t" > spectra_gatk/SFS_SELECTED_0FOLD_HIGH_MODERATE_CENTERS.tsv
 
