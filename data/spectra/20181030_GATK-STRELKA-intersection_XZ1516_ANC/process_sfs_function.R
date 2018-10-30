@@ -17,8 +17,9 @@ multi_dfe_out <- function(df, fname) {
 
 sfs_df <- data.table::fread("~/Dropbox/AndersenLab/LabFolders/Stefan/transfer/updated_sfs/SFS_INPUT.tsv") %>%
   dplyr::filter(AC%%2 == 0) %>% # removes sites with hets
-  dplyr::mutate(DERIVED_AF = ifelse(AA==REF, round(AF, digits = 5), 
-                                    ifelse(AA == ALT, round(1-AF, digits = 5), NA)))
+  dplyr::mutate(AA_correction = ifelse(AF==0 & AA==REF, ALT, AA)) %>% # changes het alt calls in ancestor to
+  dplyr::mutate(DERIVED_AF = ifelse(AA_correction==REF, round(AF, digits = 5), 
+                                    ifelse(AA_correction == ALT, round(1-AF, digits = 5), NA)))
 
 af_df <- data.frame(DERIVED_AF = round(seq(0,1,by = 1/239), digits = 5))
 
